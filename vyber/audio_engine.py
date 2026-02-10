@@ -151,6 +151,7 @@ class AudioEngine:
 
         try:
             if self.output_mode in ("speakers", "both"):
+                self._log_device_samplerate(self.speaker_device, "Speaker")
                 self._speaker_stream = sd.OutputStream(
                     samplerate=SAMPLE_RATE,
                     channels=CHANNELS,
@@ -165,6 +166,7 @@ class AudioEngine:
 
         try:
             if self.output_mode in ("mic", "both") and self.virtual_cable_device is not None:
+                self._log_device_samplerate(self.virtual_cable_device, "Virtual cable")
                 self._cable_stream = sd.OutputStream(
                     samplerate=SAMPLE_RATE,
                     channels=CHANNELS,
@@ -181,6 +183,7 @@ class AudioEngine:
             if self.mic_passthrough and self.virtual_cable_device is not None:
                 mic_dev = self.mic_device  # None = system default mic
                 mic_info = sd.query_devices(mic_dev, kind="input")
+                self._log_device_samplerate(mic_dev, "Mic input")
                 mic_channels = min(mic_info["max_input_channels"], CHANNELS)
                 self._mic_stream = sd.InputStream(
                     samplerate=SAMPLE_RATE,
@@ -328,6 +331,23 @@ class AudioEngine:
                 )
             else:
                 self._mic_buffer[:frames] = indata[:frames, :CHANNELS]
+
+    def _log_device_samplerate(self, device, label: str):
+        """Log the device's default sample rate and warn if it differs from ours."""
+        try:
+            info = sd.query_devices(device)
+            native_sr = info.get("default_samplerate", 0)
+            logger.info("%s device '%s' native sample rate: %d Hz (Vyber: %d Hz)",
+                        label, info.get("name", "?"), native_sr, SAMPLE_RATE)
+            if native_sr and native_sr != SAMPLE_RATE:
+                logger.warning(
+                    "%s device sample rate mismatch: device=%d Hz, Vyber=%d Hz. "
+                    "Set the device to %d Hz in Windows Sound settings to avoid "
+                    "audio artifacts.",
+                    label, native_sr, SAMPLE_RATE, SAMPLE_RATE
+                )
+        except Exception:
+            pass
 
     def _needs_speaker(self) -> bool:
         return self.output_mode in ("speakers", "both")
