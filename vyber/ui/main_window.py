@@ -98,6 +98,18 @@ class MainWindow:
         )
         self.discord_button.pack(side="right", padx=5)
 
+        # Refresh audio devices button
+        self.refresh_button = ctk.CTkButton(
+            self.top_frame,
+            text="Refresh Audio",
+            width=105,
+            height=32,
+            fg_color="#37474F",
+            hover_color="#546E7A",
+            command=self.callbacks.get("on_refresh_audio")
+        )
+        self.refresh_button.pack(side="right", padx=5)
+
         # Add category button
         self.add_cat_button = ctk.CTkButton(
             self.top_frame,

@@ -64,10 +64,10 @@ class VyberApp:
         # Build the GUI
         self.root = ctk.CTk()
         self.root.title("Vyber")
-        w = max(1050, self.config.get("window", "width", default=1050))
+        w = max(1070, self.config.get("window", "width", default=1070))
         h = max(650, self.config.get("window", "height", default=650))
         self.root.geometry(f"{w}x{h}")
-        self.root.minsize(1050, 650)
+        self.root.minsize(1070, 650)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
@@ -99,6 +99,7 @@ class VyberApp:
             "on_clear_category": self._on_clear_category,
             "on_open_settings": self._on_open_settings,
             "on_discord_guide": self._on_discord_guide,
+            "on_refresh_audio": self._on_refresh_audio,
             "get_categories": self.sound_manager.get_categories,
         })
 
@@ -236,6 +237,17 @@ class VyberApp:
             self.audio_engine.virtual_cable_device = self.cable_info.input_device_index
             self.config.set("audio", "virtual_cable_device",
                            self.cable_info.input_device_index)
+
+    def _on_refresh_audio(self):
+        """Re-detect audio devices and restart streams."""
+        self.cable_info = self.cable_manager.detect()
+        self._configure_audio()
+        self.audio_engine.start()
+        self.main_window.set_cable_status(
+            self.cable_info.installed, self.cable_info.input_device_name
+        )
+        self.main_window.set_cable_available(self.cable_info.installed)
+        logger.info("Audio devices refreshed")
 
     def _register_hotkeys(self):
         """Register all sound hotkeys and the stop-all hotkey."""
