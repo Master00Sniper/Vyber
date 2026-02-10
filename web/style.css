@@ -91,8 +91,8 @@ nav ul a:hover {
     text-align: center;
     padding: 4rem 2rem;
     background:
-        radial-gradient(ellipse at 50% 30%, rgba(227, 0, 0, 0.08) 0%, transparent 60%),
-        linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        linear-gradient(180deg, rgba(10, 10, 10, 0.55) 0%, rgba(10, 10, 10, 0.7) 50%, var(--bg-primary) 100%),
+        url('images/vyber_background.png') center center / cover no-repeat;
 }
 
 .hero-content {
