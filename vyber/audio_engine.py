@@ -136,10 +136,12 @@ class AudioEngine:
         # Effective sample rate — adapts to VB-CABLE's native rate
         self._effective_rate: int = SAMPLE_RATE
 
-        # Mic passthrough
+        # Mic passthrough — lock-free SPSC ring buffer
         self.mic_passthrough: bool = True
-        self._mic_buffer = np.zeros((BLOCK_SIZE, CHANNELS), dtype="float32")
-        self._mic_lock = threading.Lock()
+        self._mic_ring_size = BLOCK_SIZE * 8
+        self._mic_ring = np.zeros((self._mic_ring_size, CHANNELS), dtype="float32")
+        self._mic_write_pos = 0  # only written by mic callback
+        self._mic_read_pos = 0   # only written by cable callback
 
         # Cached mix for "both" mode — speaker callback writes, cable reads
         self._cached_mix = np.zeros((BLOCK_SIZE, CHANNELS), dtype="float32")
@@ -344,10 +346,30 @@ class AudioEngine:
         else:
             mixed = self._mix_playing_sounds(frames)
 
-        # Mix in microphone passthrough
+        # Mix in microphone passthrough from ring buffer
         if self.mic_passthrough:
-            with self._mic_lock:
-                mic_data = self._mic_buffer[:frames].copy()
+            rp = self._mic_read_pos
+            wp = self._mic_write_pos
+            ring = self._mic_ring_size
+            available = (wp - rp) % ring
+
+            # If writer lapped reader, skip ahead to stay close behind writer
+            if available > ring // 2:
+                rp = (wp - frames) % ring
+                available = frames
+
+            n = min(frames, available)
+            mic_data = np.zeros((frames, CHANNELS), dtype="float32")
+            if n > 0:
+                end = rp + n
+                if end <= ring:
+                    mic_data[:n] = self._mic_ring[rp:end]
+                else:
+                    first = ring - rp
+                    mic_data[:first] = self._mic_ring[rp:]
+                    mic_data[first:n] = self._mic_ring[:n - first]
+                self._mic_read_pos = (rp + n) % ring
+
             mixed += mic_data
 
         np.clip(mixed, -1.0, 1.0, out=mixed)
@@ -355,15 +377,23 @@ class AudioEngine:
 
     def _mic_callback(self, indata: np.ndarray, frames: int,
                       time_info, status):
-        """Callback for microphone input — stores data for passthrough mixing."""
-        with self._mic_lock:
-            if indata.shape[1] < CHANNELS:
-                # Mono mic -> stereo
-                self._mic_buffer[:frames] = np.column_stack(
-                    [indata[:frames, 0]] * CHANNELS
-                )
-            else:
-                self._mic_buffer[:frames] = indata[:frames, :CHANNELS]
+        """Callback for microphone input — writes to ring buffer for passthrough."""
+        if indata.shape[1] < CHANNELS:
+            processed = np.column_stack([indata[:frames, 0]] * CHANNELS)
+        else:
+            processed = indata[:frames, :CHANNELS]
+
+        n = processed.shape[0]
+        wp = self._mic_write_pos
+        ring = self._mic_ring_size
+        end = wp + n
+        if end <= ring:
+            self._mic_ring[wp:end] = processed
+        else:
+            first = ring - wp
+            self._mic_ring[wp:] = processed[:first]
+            self._mic_ring[:n - first] = processed[first:]
+        self._mic_write_pos = (wp + n) % ring
 
     def _log_device_samplerate(self, device, label: str):
         """Log the device's default sample rate."""
