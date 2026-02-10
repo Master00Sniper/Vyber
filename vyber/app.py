@@ -79,6 +79,7 @@ class VyberApp:
             "on_remove_category": self._on_remove_category,
             "on_clear_category": self._on_clear_category,
             "on_open_settings": self._on_open_settings,
+            "on_discord_guide": self._on_discord_guide,
             "get_categories": self.sound_manager.get_categories,
         })
 
@@ -528,6 +529,125 @@ class VyberApp:
             on_install_vb_cable=self._start_vb_cable_install,
             icon_path=str(self._ico_path) if self._ico_path.exists() else None,
         )
+
+    def _on_discord_guide(self):
+        """Show the Discord setup guide dialog."""
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title("Discord Setup Guide")
+        dialog.geometry("520x560")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        scroll = ctk.CTkScrollableFrame(dialog, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
+
+        bold = ctk.CTkFont(size=14, weight="bold")
+        heading = ctk.CTkFont(size=16, weight="bold")
+        body = ctk.CTkFont(size=13)
+        dim = "gray70"
+
+        # --- Title ---
+        ctk.CTkLabel(scroll, text="Setting Up Vyber with Discord",
+                     font=heading).pack(anchor="w", pady=(5, 10))
+
+        # --- Step 1 ---
+        ctk.CTkLabel(scroll, text="Step 1 — Set Your Input Device",
+                     font=bold).pack(anchor="w", pady=(8, 2))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=470, justify="left",
+            text="In Discord, go to Settings > Voice & Video.\n\n"
+                 "Under INPUT DEVICE, select:\n"
+                 "    CABLE Output (VB-Audio Virtual Cable)\n\n"
+                 "This tells Discord to listen to VB-CABLE, which is "
+                 "where Vyber sends its audio."
+        ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
+
+        # --- Step 2 ---
+        ctk.CTkLabel(scroll, text="Step 2 — Use Push to Talk or Voice Activity",
+                     font=bold).pack(anchor="w", pady=(12, 2))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=470, justify="left",
+            text="If using Voice Activity, set the sensitivity slider manually "
+                 "rather than relying on automatic detection, since VB-CABLE "
+                 "audio levels differ from a real microphone."
+        ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
+
+        # --- Step 3 ---
+        ctk.CTkLabel(scroll, text="Step 3 — Disable Audio Processing",
+                     font=bold).pack(anchor="w", pady=(12, 2))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=470, justify="left",
+            text="Discord's audio processing is designed for real "
+                 "microphones and will distort soundboard audio. "
+                 "Scroll down to the Voice Processing section and "
+                 "disable the following:"
+        ).pack(anchor="w", padx=(10, 0), pady=(0, 6))
+
+        toggles = [
+            ("Krisp Noise Suppression", "Will filter out your sound effects"),
+            ("Echo Cancellation", "Causes audio artifacts on played sounds"),
+            ("Automatic Gain Control", "Fluctuates volume unpredictably"),
+            ("Advanced Voice Activity", "Can block soundboard audio from transmitting"),
+        ]
+        for name, reason in toggles:
+            row = ctk.CTkFrame(scroll, fg_color="transparent")
+            row.pack(fill="x", padx=(10, 0), pady=1)
+            ctk.CTkLabel(row, text=f"OFF", font=ctk.CTkFont(size=12, weight="bold"),
+                         text_color="#FF5722", width=32).pack(side="left")
+            ctk.CTkLabel(row, text=f"  {name}", font=body).pack(side="left")
+            ctk.CTkLabel(row, text=f"  — {reason}", font=body,
+                         text_color=dim).pack(side="left")
+
+        # --- Step 4 ---
+        ctk.CTkLabel(scroll, text="Step 4 — Advanced Voice Settings",
+                     font=bold).pack(anchor="w", pady=(14, 2))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=470, justify="left",
+            text="Expand \"Advanced Voice Settings\" at the bottom of "
+                 "the Voice & Video page and also disable:"
+        ).pack(anchor="w", padx=(10, 0), pady=(0, 6))
+
+        advanced_toggles = [
+            "Automatic Gain Control",
+            "Advanced Voice Activity",
+            "Bypass System Audio Input Processing",
+            "No Audio Detected Warning",
+        ]
+        for name in advanced_toggles:
+            row = ctk.CTkFrame(scroll, fg_color="transparent")
+            row.pack(fill="x", padx=(10, 0), pady=1)
+            ctk.CTkLabel(row, text=f"OFF", font=ctk.CTkFont(size=12, weight="bold"),
+                         text_color="#FF5722", width=32).pack(side="left")
+            ctk.CTkLabel(row, text=f"  {name}", font=body).pack(side="left")
+
+        # --- Step 5 ---
+        ctk.CTkLabel(scroll, text="Step 5 — Global Attenuation",
+                     font=bold).pack(anchor="w", pady=(14, 2))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=470, justify="left",
+            text="Set Global Attenuation to 0%. This prevents Discord "
+                 "from lowering the volume of other applications when "
+                 "someone is speaking, which can interfere with Vyber's "
+                 "audio output."
+        ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
+
+        # --- Tip ---
+        tip_frame = ctk.CTkFrame(scroll, fg_color="#1a3a1a", corner_radius=8)
+        tip_frame.pack(fill="x", padx=5, pady=(14, 8))
+        ctk.CTkLabel(
+            tip_frame, font=body, wraplength=450, justify="left",
+            text="Tip: In Vyber, set the output mode to \"Both\" so your "
+                 "friends hear the sounds and you do too. If your own voice "
+                 "needs to go through as well, make sure \"Mic Passthrough\" "
+                 "is enabled in Vyber Settings."
+        ).pack(padx=12, pady=10)
+
+        # --- Close button ---
+        ctk.CTkButton(dialog, text="Got It", width=100,
+                       command=dialog.destroy).pack(pady=(8, 12))
+
+        self._setup_dialog(dialog)
 
     def _apply_settings(self, settings: dict):
         """Apply settings from the settings dialog."""

@@ -86,6 +86,18 @@ class MainWindow:
         )
         self.settings_button.pack(side="right", padx=5)
 
+        # Discord Setup guide button
+        self.discord_button = ctk.CTkButton(
+            self.top_frame,
+            text="Discord Setup",
+            width=110,
+            height=32,
+            fg_color="#5865F2",
+            hover_color="#4752C4",
+            command=self.callbacks.get("on_discord_guide")
+        )
+        self.discord_button.pack(side="right", padx=5)
+
         # Add category button
         self.add_cat_button = ctk.CTkButton(
             self.top_frame,
