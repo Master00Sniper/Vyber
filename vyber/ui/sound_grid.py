@@ -35,7 +35,7 @@ class SoundButton(ctk.CTkButton):
         # Right-click context menu
         self.bind("<Button-3>", self._show_context_menu)
 
-    def _clicked(self):
+    def _clicked(self, *_args):
         if self._on_play:
             self._on_play(self.sound_name)
 
