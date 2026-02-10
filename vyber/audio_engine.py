@@ -15,7 +15,7 @@ except ImportError:
     HAS_PYDUB = False
 
 
-# Standard sample rate for all audio processing
+# Default sample rate — may be overridden at runtime to match VB-CABLE
 SAMPLE_RATE = 48000
 CHANNELS = 2
 BLOCK_SIZE = 1024
@@ -24,32 +24,32 @@ BLOCK_SIZE = 1024
 class SoundClip:
     """A loaded sound ready for playback."""
 
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str, target_rate: int = SAMPLE_RATE):
         self.filepath = filepath
         self.data: np.ndarray | None = None
-        self.sample_rate: int = SAMPLE_RATE
-        self._load(filepath)
+        self.sample_rate: int = target_rate
+        self._load(filepath, target_rate)
 
-    def _load(self, filepath: str):
-        """Load an audio file into a numpy array, resampled to SAMPLE_RATE stereo."""
+    def _load(self, filepath: str, target_rate: int):
+        """Load an audio file into a numpy array, resampled to target_rate stereo."""
         ext = filepath.lower().rsplit(".", 1)[-1] if "." in filepath else ""
 
         if ext == "mp3" and HAS_PYDUB:
-            self._load_mp3(filepath)
+            self._load_mp3(filepath, target_rate)
         else:
-            self._load_soundfile(filepath)
+            self._load_soundfile(filepath, target_rate)
 
-    def _load_soundfile(self, filepath: str):
+    def _load_soundfile(self, filepath: str, target_rate: int):
         """Load via soundfile (WAV, FLAC, OGG)."""
         data, sr = sf.read(filepath, dtype="float32", always_2d=True)
         self.data = self._ensure_stereo(data)
-        if sr != SAMPLE_RATE:
-            self.data = self._resample(self.data, sr, SAMPLE_RATE)
+        if sr != target_rate:
+            self.data = self._resample(self.data, sr, target_rate)
 
-    def _load_mp3(self, filepath: str):
+    def _load_mp3(self, filepath: str, target_rate: int):
         """Load MP3 via pydub, convert to numpy array."""
         audio = AudioSegment.from_mp3(filepath)
-        audio = audio.set_frame_rate(SAMPLE_RATE).set_channels(CHANNELS)
+        audio = audio.set_frame_rate(target_rate).set_channels(CHANNELS)
         samples = np.array(audio.get_array_of_samples(), dtype="float32")
         samples = samples / (2 ** 15)  # Normalize int16 to float32
         samples = samples.reshape(-1, CHANNELS)
@@ -133,6 +133,9 @@ class AudioEngine:
         self._cable_stream: sd.OutputStream | None = None
         self._mic_stream: sd.InputStream | None = None
 
+        # Effective sample rate — adapts to VB-CABLE's native rate
+        self._effective_rate: int = SAMPLE_RATE
+
         # Mic passthrough
         self.mic_passthrough: bool = True
         self._mic_buffer = np.zeros((BLOCK_SIZE, CHANNELS), dtype="float32")
@@ -149,11 +152,21 @@ class AudioEngine:
         """Start audio output streams."""
         self._stop_streams()
 
+        # Adapt sample rate to VB-CABLE's native rate if available
+        old_rate = self._effective_rate
+        self._detect_effective_rate()
+        if self._effective_rate != old_rate:
+            logger.info("Sample rate changed from %d to %d Hz — clearing sound cache",
+                        old_rate, self._effective_rate)
+            self._cache.clear()
+
+        rate = self._effective_rate
+
         try:
             if self.output_mode in ("speakers", "both"):
                 self._log_device_samplerate(self.speaker_device, "Speaker")
                 self._speaker_stream = sd.OutputStream(
-                    samplerate=SAMPLE_RATE,
+                    samplerate=rate,
                     channels=CHANNELS,
                     blocksize=BLOCK_SIZE,
                     device=self.speaker_device,
@@ -168,7 +181,7 @@ class AudioEngine:
             if self.output_mode in ("mic", "both") and self.virtual_cable_device is not None:
                 self._log_device_samplerate(self.virtual_cable_device, "Virtual cable")
                 self._cable_stream = sd.OutputStream(
-                    samplerate=SAMPLE_RATE,
+                    samplerate=rate,
                     channels=CHANNELS,
                     blocksize=BLOCK_SIZE,
                     device=self.virtual_cable_device,
@@ -186,7 +199,7 @@ class AudioEngine:
                 self._log_device_samplerate(mic_dev, "Mic input")
                 mic_channels = min(mic_info["max_input_channels"], CHANNELS)
                 self._mic_stream = sd.InputStream(
-                    samplerate=SAMPLE_RATE,
+                    samplerate=rate,
                     channels=mic_channels,
                     blocksize=BLOCK_SIZE,
                     device=mic_dev,
@@ -196,6 +209,26 @@ class AudioEngine:
                 self._mic_stream.start()
         except Exception as e:
             logger.error("Failed to open mic stream: %s", e)
+
+    def _detect_effective_rate(self):
+        """Detect the VB-CABLE device's native sample rate and adapt to it."""
+        if self.virtual_cable_device is None:
+            self._effective_rate = SAMPLE_RATE
+            return
+        try:
+            info = sd.query_devices(self.virtual_cable_device)
+            native_sr = int(info.get("default_samplerate", 0))
+            if native_sr > 0:
+                if native_sr != SAMPLE_RATE:
+                    logger.info(
+                        "VB-CABLE native rate is %d Hz — adapting all streams to match",
+                        native_sr
+                    )
+                self._effective_rate = native_sr
+            else:
+                self._effective_rate = SAMPLE_RATE
+        except Exception:
+            self._effective_rate = SAMPLE_RATE
 
     def stop(self):
         """Stop all streams."""
@@ -221,7 +254,7 @@ class AudioEngine:
         if filepath in self._cache:
             return self._cache[filepath]
         try:
-            clip = SoundClip(filepath)
+            clip = SoundClip(filepath, target_rate=self._effective_rate)
             self._cache[filepath] = clip
             return clip
         except Exception as e:
@@ -332,44 +365,13 @@ class AudioEngine:
             else:
                 self._mic_buffer[:frames] = indata[:frames, :CHANNELS]
 
-    def check_sample_rate_mismatches(self) -> list[tuple[str, str, int]]:
-        """Check all active devices for sample rate mismatches.
-
-        Returns a list of (label, device_name, native_rate) for each mismatch.
-        """
-        mismatches = []
-        devices_to_check = []
-
-        if self.virtual_cable_device is not None:
-            devices_to_check.append((self.virtual_cable_device, "VB-CABLE"))
-        if self.mic_device is not None:
-            devices_to_check.append((self.mic_device, "Microphone"))
-
-        for dev_index, label in devices_to_check:
-            try:
-                info = sd.query_devices(dev_index)
-                native_sr = int(info.get("default_samplerate", 0))
-                if native_sr and native_sr != SAMPLE_RATE:
-                    mismatches.append((label, info.get("name", "Unknown"), native_sr))
-            except Exception:
-                pass
-
-        return mismatches
-
     def _log_device_samplerate(self, device, label: str):
-        """Log the device's default sample rate and warn if it differs from ours."""
+        """Log the device's default sample rate."""
         try:
             info = sd.query_devices(device)
             native_sr = info.get("default_samplerate", 0)
-            logger.info("%s device '%s' native sample rate: %d Hz (Vyber: %d Hz)",
-                        label, info.get("name", "?"), native_sr, SAMPLE_RATE)
-            if native_sr and native_sr != SAMPLE_RATE:
-                logger.warning(
-                    "%s device sample rate mismatch: device=%d Hz, Vyber=%d Hz. "
-                    "Set the device to %d Hz in Windows Sound settings to avoid "
-                    "audio artifacts.",
-                    label, native_sr, SAMPLE_RATE, SAMPLE_RATE
-                )
+            logger.info("%s device '%s' native sample rate: %d Hz (using: %d Hz)",
+                        label, info.get("name", "?"), native_sr, self._effective_rate)
         except Exception:
             pass
 
