@@ -154,6 +154,9 @@ class AudioEngine:
 
     def start(self):
         """Start audio output streams."""
+        logger.info("Starting audio engine — mode=%s, speaker=%s, cable=%s, mic=%s",
+                     self.output_mode, self.speaker_device,
+                     self.virtual_cable_device, self.mic_device)
         self._stop_streams()
 
         # Adapt sample rate to VB-CABLE's native rate if available

@@ -60,6 +60,7 @@ class VyberApp:
         self.cable_info = self.cable_manager.detect()
 
         # Configure audio engine from config/detected devices
+        logger.info("VB-CABLE installed: %s", self.cable_info.installed)
         self._configure_audio()
 
         self._install_pending = False
@@ -232,6 +233,8 @@ class VyberApp:
         mic = self.config.get("audio", "mic_device")
         mode = self.config.get("audio", "output_mode", default="both")
         passthrough = self.config.get("audio", "mic_passthrough", default=True)
+        logger.info("Audio config: speaker=%s, mic=%s, mode=%s, passthrough=%s",
+                     speaker, mic, mode, passthrough)
 
         self.audio_engine.speaker_device = speaker
         self.audio_engine.mic_device = mic
@@ -245,6 +248,7 @@ class VyberApp:
 
     def _on_refresh_audio(self):
         """Re-detect audio devices and restart streams."""
+        logger.info("Refreshing audio devices...")
         self.cable_info = self.cable_manager.detect()
         self._configure_audio()
         self.audio_engine.start()
@@ -252,7 +256,10 @@ class VyberApp:
             self.cable_info.installed, self.cable_info.input_device_name
         )
         self.main_window.set_cable_available(self.cable_info.installed)
-        logger.info("Audio devices refreshed")
+        logger.info("Audio devices refreshed — VB-CABLE: %s, speaker: %s, mic: %s",
+                     self.cable_info.installed,
+                     self.audio_engine.speaker_device,
+                     self.audio_engine.mic_device)
 
     def _register_hotkeys(self):
         """Register all sound hotkeys and the stop-all hotkey."""
@@ -301,13 +308,17 @@ class VyberApp:
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
                 if overlap == "stop" and sound.path in self.audio_engine.get_playing_filepaths():
+                    logger.info("Stopping sound: %s (overlap=stop)", sound_name)
                     self.audio_engine.stop_sound(sound.path)
                 else:
+                    logger.info("Playing sound: %s [%s] vol=%.0f%%",
+                                sound_name, category, sound.volume * 100)
                     self.audio_engine.play_sound(sound.path, sound.volume)
                 send_telemetry("sound_played")
                 break
 
     def _on_stop_all(self):
+        logger.info("Stop all sounds")
         self.audio_engine.stop_all()
 
     def _on_add_sound(self, category: str):
@@ -324,6 +335,7 @@ class VyberApp:
         for path in paths:
             self.sound_manager.add_sound(category, path)
         if paths:
+            logger.info("Added %d sound(s) to '%s'", len(paths), category)
             self._refresh_tab(category)
             self._register_hotkeys()
 
@@ -336,6 +348,8 @@ class VyberApp:
         if folder:
             added = self.sound_manager.add_sounds_from_directory(folder, category)
             if added:
+                logger.info("Added %d sound(s) from folder to '%s'",
+                            len(added), category)
                 self._refresh_tab(category)
                 self._register_hotkeys()
 
@@ -536,6 +550,7 @@ class VyberApp:
 
     def _on_output_mode_change(self, mode: str):
         """Output mode changed."""
+        logger.info("Output mode changed to '%s'", mode)
         self.audio_engine.set_output_mode(mode)
         self.config.set("audio", "output_mode", mode)
 
@@ -545,6 +560,7 @@ class VyberApp:
                                       parent=self.root)
         if name and name.strip():
             if self.sound_manager.add_category(name.strip()):
+                logger.info("Added category: %s", name.strip())
                 self._refresh_all_tabs()
 
     def _on_remove_category(self, name: str):
@@ -553,6 +569,7 @@ class VyberApp:
                                f"Remove category '{name}' and all its sounds?",
                                parent=self.root):
             if self.sound_manager.remove_category(name):
+                logger.info("Removed category: %s", name)
                 self._refresh_all_tabs()
 
     def _on_clear_category(self, name: str):
@@ -798,11 +815,28 @@ class VyberApp:
         desc_textbox = ctk.CTkTextbox(scroll, width=400, height=100, wrap="word")
         desc_textbox.pack(anchor="center", pady=(0, 8))
 
+        checkbox_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+        checkbox_frame.pack(anchor="center", pady=(2, 2))
+
         include_system_var = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(
-            scroll, text="Include system info (OS, Vyber version)",
+            checkbox_frame,
+            text="Include system info (OS, Vyber version)",
             variable=include_system_var, font=body,
-        ).pack(anchor="center", pady=(2, 8))
+        ).pack(anchor="w", pady=(2, 4))
+
+        include_logs_var = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            checkbox_frame,
+            text="Include recent logs (last 250 lines)",
+            variable=include_logs_var, font=body,
+        ).pack(anchor="w", pady=(0, 4))
+
+        ctk.CTkLabel(
+            scroll, font=ctk.CTkFont(size=11), text_color="gray50",
+            text="Your Windows username is redacted from logs. Other\n"
+                 "folder names in paths may be visible in the report.",
+        ).pack(anchor="center", pady=(0, 6))
 
         status_label = ctk.CTkLabel(scroll, text="", font=body)
         status_label.pack(anchor="center", pady=(0, 4))
@@ -810,6 +844,7 @@ class VyberApp:
         submit_time = [0.0]
 
         def _get_system_info():
+            import re as _re
             lines = [
                 f"- **Vyber Version**: {__version__}",
                 f"- **OS**: {platform.system()} {platform.release()} "
@@ -818,6 +853,26 @@ class VyberApp:
                 f"- **Architecture**: {platform.machine()}",
             ]
             return "\n".join(lines)
+
+        def _get_recent_logs(num_lines=250):
+            """Read the last N lines from the log file, redacting usernames."""
+            import re as _re
+            from vyber.config import LOG_FILE
+            if not LOG_FILE.exists():
+                return None
+            try:
+                with open(LOG_FILE, "r", encoding="utf-8",
+                          errors="replace") as f:
+                    all_lines = f.readlines()
+                recent = all_lines[-num_lines:] if len(all_lines) > num_lines else all_lines
+                text = "".join(recent).strip()
+                # Redact Windows usernames from paths
+                text = _re.sub(
+                    r'(C:[/\\][Uu]sers[/\\])([^/\\]+)([/\\])',
+                    r'\1[REDACTED]\3', text)
+                return text
+            except Exception:
+                return None
 
         def _submit():
             submit_btn.configure(state="disabled", fg_color="gray50")
@@ -853,6 +908,19 @@ class VyberApp:
             if include_system_var.get():
                 body_parts.append("\n## System Information")
                 body_parts.append(_get_system_info())
+            if include_logs_var.get():
+                recent_logs = _get_recent_logs(250)
+                if recent_logs:
+                    body_parts.append("\n## Recent Logs")
+                    body_parts.append("<details>")
+                    body_parts.append(
+                        "<summary>Click to expand logs "
+                        "(last 250 lines)</summary>")
+                    body_parts.append("")
+                    body_parts.append("```")
+                    body_parts.append(recent_logs)
+                    body_parts.append("```")
+                    body_parts.append("</details>")
             body_parts.append("\n---")
             body_parts.append("*Submitted via Vyber*")
             issue_body = "\n".join(body_parts)
@@ -1047,6 +1115,11 @@ class VyberApp:
 
     def _apply_settings(self, settings: dict):
         """Apply settings from the settings dialog."""
+        logger.info("Applying settings: speaker=%s, mic=%s, passthrough=%s, "
+                     "stop_key=%s, overlap=%s",
+                     settings["speaker_device"], settings["mic_device"],
+                     settings["mic_passthrough"], settings["stop_all_hotkey"],
+                     settings["sound_overlap"])
         self.config.set("audio", "output_device", settings["speaker_device"])
         self.config.set("audio", "mic_device", settings["mic_device"])
         self.config.set("audio", "mic_passthrough", settings["mic_passthrough"])
