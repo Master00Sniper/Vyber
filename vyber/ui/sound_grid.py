@@ -88,7 +88,10 @@ class SoundButton(ctk.CTkButton):
 class SoundGrid(ctk.CTkScrollableFrame):
     """Scrollable grid of sound buttons for a single category."""
 
-    COLUMNS = 5
+    _BUTTON_WIDTH = 130
+    _BUTTON_PAD = 10  # 5px on each side
+    _CELL_WIDTH = _BUTTON_WIDTH + _BUTTON_PAD
+    _MIN_COLUMNS = 3
     _DRAG_THRESHOLD = 8  # pixels before drag activates
 
     def __init__(self, master, category: str,
@@ -117,6 +120,8 @@ class SoundGrid(ctk.CTkScrollableFrame):
         self._get_categories = get_categories
         self._buttons: dict[str, SoundButton] = {}
         self._button_order: list[str] = []  # ordered list of sound names
+        self._columns = self._MIN_COLUMNS
+        self._sounds_cache: list | None = None  # cached for re-layout
 
         # Drag state
         self._drag_source: str | None = None
@@ -133,6 +138,9 @@ class SoundGrid(ctk.CTkScrollableFrame):
             command=self._add_sound_clicked
         )
 
+        # Respond to width changes
+        self.bind("<Configure>", self._on_configure)
+
     def populate(self, sounds: list):
         """Fill the grid with sound buttons. `sounds` is a list of SoundEntry."""
         # Clear existing buttons
@@ -140,8 +148,9 @@ class SoundGrid(ctk.CTkScrollableFrame):
             btn.destroy()
         self._buttons.clear()
         self._button_order.clear()
+        self._sounds_cache = sounds
 
-        for i, sound in enumerate(sounds):
+        for sound in sounds:
             btn = SoundButton(
                 self,
                 sound_name=sound.name,
@@ -150,17 +159,30 @@ class SoundGrid(ctk.CTkScrollableFrame):
                 on_play=lambda name: self._play(name),
                 on_context_menu=self._context_menu
             )
-            row, col = divmod(i, self.COLUMNS)
-            btn.grid(row=row, column=col, padx=5, pady=5)
             self._buttons[sound.name] = btn
             self._button_order.append(sound.name)
-
-            # Drag bindings on all internal widgets of the button
             self._bind_drag(btn)
 
-        # Place Add button at the end
-        add_idx = len(sounds)
-        row, col = divmod(add_idx, self.COLUMNS)
+        self._layout_buttons()
+
+    def _on_configure(self, event):
+        """Recalculate columns when the grid is resized."""
+        width = event.width
+        new_cols = max(self._MIN_COLUMNS, width // self._CELL_WIDTH)
+        if new_cols != self._columns:
+            self._columns = new_cols
+            self._layout_buttons()
+
+    def _layout_buttons(self):
+        """Place all buttons on the grid using current column count."""
+        for i, name in enumerate(self._button_order):
+            btn = self._buttons.get(name)
+            if btn:
+                row, col = divmod(i, self._columns)
+                btn.grid(row=row, column=col, padx=5, pady=5)
+
+        add_idx = len(self._button_order)
+        row, col = divmod(add_idx, self._columns)
         self._add_button.grid(row=row, column=col, padx=5, pady=5)
 
     def _bind_drag(self, btn: SoundButton):

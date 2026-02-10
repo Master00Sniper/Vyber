@@ -46,8 +46,8 @@ DEFAULT_CONFIG = {
         "sound_overlap": "overlap"  # "overlap" or "stop"
     },
     "window": {
-        "width": 900,
-        "height": 600
+        "width": 1100,
+        "height": 650
     }
 }
 

@@ -6,7 +6,7 @@ import webbrowser
 
 
 class SettingsDialog(ctk.CTkToplevel):
-    """Modal settings dialog with Audio and Preferences tabs."""
+    """Modal settings dialog."""
 
     def __init__(self, master,
                  output_devices: list[dict],
@@ -22,7 +22,7 @@ class SettingsDialog(ctk.CTkToplevel):
         super().__init__(master)
 
         self.title("Vyber Settings")
-        self.geometry("520x560")
+        self.geometry("500x580")
         self.resizable(False, False)
         self.transient(master)
         self.grab_set()
@@ -42,21 +42,14 @@ class SettingsDialog(ctk.CTkToplevel):
                   current_speaker, current_mic, current_stop_hotkey,
                   mic_passthrough, sound_overlap):
 
-        # --- Tabview ---
-        self.tabview = ctk.CTkTabview(self, height=440)
-        self.tabview.pack(fill="both", expand=True, padx=15, pady=(10, 0))
+        # Scrollable content in case the window is tight
+        content = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=15, pady=(10, 0))
 
-        self.tabview.add("Audio")
-        self.tabview.add("Preferences")
-
-        # =====================================================================
-        # Audio tab
-        # =====================================================================
-        audio_tab = self.tabview.tab("Audio")
         pad = {"padx": 10, "pady": (8, 4)}
 
         # --- VB-CABLE Status ---
-        status_frame = ctk.CTkFrame(audio_tab)
+        status_frame = ctk.CTkFrame(content)
         status_frame.pack(fill="x", **pad)
 
         ctk.CTkLabel(status_frame, text="VB-CABLE Status",
@@ -95,7 +88,7 @@ class SettingsDialog(ctk.CTkToplevel):
             ).pack(side="left")
 
         # --- Speaker Device ---
-        ctk.CTkLabel(audio_tab, text="Speaker Output Device",
+        ctk.CTkLabel(content, text="Speaker Output Device",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", **pad)
 
@@ -109,13 +102,13 @@ class SettingsDialog(ctk.CTkToplevel):
 
         self.speaker_var = ctk.StringVar(value=current_speaker_name)
         self.speaker_dropdown = ctk.CTkOptionMenu(
-            audio_tab, values=speaker_names, variable=self.speaker_var,
+            content, values=speaker_names, variable=self.speaker_var,
             width=400
         )
         self.speaker_dropdown.pack(anchor="w", padx=10, pady=(0, 8))
 
         # --- Microphone Device ---
-        ctk.CTkLabel(audio_tab, text="Microphone Input Device",
+        ctk.CTkLabel(content, text="Microphone Input Device",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", **pad)
 
@@ -129,64 +122,57 @@ class SettingsDialog(ctk.CTkToplevel):
 
         self.mic_var = ctk.StringVar(value=current_mic_name)
         self.mic_dropdown = ctk.CTkOptionMenu(
-            audio_tab, values=mic_names, variable=self.mic_var, width=400
+            content, values=mic_names, variable=self.mic_var, width=400
         )
         self.mic_dropdown.pack(anchor="w", padx=10, pady=(0, 8))
 
         # --- Mic Passthrough ---
         self.passthrough_var = ctk.BooleanVar(value=mic_passthrough)
         ctk.CTkCheckBox(
-            audio_tab,
+            content,
             text="Mix microphone audio into virtual cable (mic passthrough)",
             variable=self.passthrough_var
         ).pack(anchor="w", padx=10, pady=5)
 
         # --- Stop All Hotkey ---
-        ctk.CTkLabel(audio_tab, text="Stop All Hotkey",
+        ctk.CTkLabel(content, text="Stop All Hotkey",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", **pad)
 
         self.hotkey_var = ctk.StringVar(value=current_stop_hotkey)
         self.hotkey_entry = ctk.CTkEntry(
-            audio_tab, textvariable=self.hotkey_var, width=200
+            content, textvariable=self.hotkey_var, width=200
         )
         self.hotkey_entry.pack(anchor="w", padx=10, pady=(0, 8))
 
-        # =====================================================================
-        # Preferences tab
-        # =====================================================================
-        prefs_tab = self.tabview.tab("Preferences")
-
         # --- Replay Behavior ---
-        ctk.CTkLabel(prefs_tab, text="Replay Behavior",
+        ctk.CTkLabel(content, text="Replay Behavior",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(
-            anchor="w", padx=10, pady=(10, 2))
+            anchor="w", **pad)
 
         ctk.CTkLabel(
-            prefs_tab,
+            content,
             text="When clicking a sound that is already playing:",
             text_color="gray",
-        ).pack(anchor="w", padx=10, pady=(0, 6))
+        ).pack(anchor="w", padx=10, pady=(0, 4))
 
         self.overlap_var = ctk.StringVar(value=sound_overlap)
 
         ctk.CTkRadioButton(
-            prefs_tab,
+            content,
             text="Play another instance (layer on top)",
             variable=self.overlap_var,
             value="overlap",
-        ).pack(anchor="w", padx=20, pady=3)
+        ).pack(anchor="w", padx=20, pady=2)
 
         ctk.CTkRadioButton(
-            prefs_tab,
+            content,
             text="Stop the sound",
             variable=self.overlap_var,
             value="stop",
-        ).pack(anchor="w", padx=20, pady=3)
+        ).pack(anchor="w", padx=20, pady=2)
 
-        # =====================================================================
-        # Save / Cancel buttons (outside tabs)
-        # =====================================================================
+        # --- Save / Cancel buttons ---
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         btn_frame.pack(fill="x", padx=15, pady=(8, 12))
 
