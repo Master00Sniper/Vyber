@@ -100,8 +100,8 @@ nav ul a:hover {
 }
 
 .hero-logo {
-    width: 320px;
-    max-width: 80vw;
+    width: 480px;
+    max-width: 85vw;
     margin-bottom: 1.5rem;
     filter: drop-shadow(0 0 40px var(--accent-glow));
 }
@@ -408,7 +408,7 @@ footer {
     }
 
     .hero-logo {
-        width: 220px;
+        width: 320px;
     }
 
     .features,
