@@ -1,14 +1,33 @@
 """Main application controller — wires together all components."""
 
+import ctypes
 import logging
 import os
 import sys
 import threading
+import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
 
 import customtkinter as ctk
 
 logger = logging.getLogger(__name__)
+
+# Dark background color matching CTk dark theme
+_DARK_BG = "#2b2b2b"
+
+
+def _set_dark_title_bar(window):
+    """Set the Windows title bar to dark mode (Windows 10 20H1+)."""
+    if sys.platform != "win32":
+        return
+    try:
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        value = ctypes.c_int(1)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 20, ctypes.byref(value), ctypes.sizeof(value)
+        )
+    except Exception:
+        pass
 
 from vyber import IMAGES_DIR
 from vyber.config import Config
@@ -170,17 +189,36 @@ class VyberApp:
         self.config.save()
         self.root.destroy()
 
-    def _setup_dialog(self, dialog: ctk.CTkToplevel):
-        """Center a dialog on the main window and set the Vyber icon."""
-        dialog.update_idletasks()
+    def _setup_dialog(self, dialog):
+        """Finish a dialog: set icon, center, render, then show without flash.
+
+        Dialogs must be created with tk.Toplevel + withdraw() so this
+        method can set the icon while hidden, force-render all CTk
+        widgets, and only then deiconify for a flash-free appearance.
+        """
+        # Set icon while still hidden
+        if self._ico_path.exists():
+            try:
+                dialog.iconbitmap(str(self._ico_path))
+            except Exception:
+                pass
+
+        # Force full render of all CTk widgets while hidden
+        dialog.update()
+
+        # Center on main window using rendered size
         pw, ph = self.root.winfo_width(), self.root.winfo_height()
         px, py = self.root.winfo_x(), self.root.winfo_y()
         dw, dh = dialog.winfo_width(), dialog.winfo_height()
         x = px + (pw - dw) // 2
         y = py + (ph - dh) // 2
         dialog.geometry(f"+{x}+{y}")
-        if self._ico_path.exists():
-            dialog.after(200, lambda: dialog.iconbitmap(str(self._ico_path)))
+
+        # Show the fully-rendered window
+        dialog.deiconify()
+        _set_dark_title_bar(dialog)
+        dialog.lift()
+        dialog.focus_force()
 
     def _configure_audio(self):
         """Configure audio engine devices from config and detected cables."""
@@ -435,21 +473,26 @@ class VyberApp:
                 current = sound.volume
                 break
 
-        dialog = ctk.CTkToplevel(self.root)
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
         dialog.title(f"Volume — {sound_name}")
         dialog.geometry("300x160")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
 
-        ctk.CTkLabel(dialog, text=sound_name,
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        ctk.CTkLabel(outer, text=sound_name,
                      font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(12, 2))
 
-        label = ctk.CTkLabel(dialog, text=f"{int(current * 100)}%",
+        label = ctk.CTkLabel(outer, text=f"{int(current * 100)}%",
                              font=ctk.CTkFont(size=14))
         label.pack(pady=(0, 0))
 
-        slider = ctk.CTkSlider(dialog, from_=0, to=1, number_of_steps=100,
+        slider = ctk.CTkSlider(outer, from_=0, to=1, number_of_steps=100,
                                 width=250)
         slider.set(current)
         slider.pack(pady=8)
@@ -464,7 +507,7 @@ class VyberApp:
                 category, sound_name, round(slider.get(), 2))
             dialog.destroy()
 
-        ctk.CTkButton(dialog, text="OK", width=80,
+        ctk.CTkButton(outer, text="OK", width=80,
                        command=on_ok).pack(pady=(0, 10))
 
         self._setup_dialog(dialog)
@@ -532,14 +575,19 @@ class VyberApp:
 
     def _on_discord_guide(self):
         """Show the Discord setup guide dialog."""
-        dialog = ctk.CTkToplevel(self.root)
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
         dialog.title("Discord Setup Guide")
         dialog.geometry("520x560")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
 
-        scroll = ctk.CTkScrollableFrame(dialog, fg_color="transparent")
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
 
         bold = ctk.CTkFont(size=14, weight="bold")
@@ -644,7 +692,7 @@ class VyberApp:
         ).pack(padx=12, pady=10)
 
         # --- Close button ---
-        ctk.CTkButton(dialog, text="Got It", width=100,
+        ctk.CTkButton(outer, text="Got It", width=100,
                        command=dialog.destroy).pack(pady=(8, 12))
 
         self._setup_dialog(dialog)
