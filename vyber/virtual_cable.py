@@ -31,7 +31,7 @@ class VirtualCableManager:
         """Scan audio devices and detect VB-CABLE.
 
         VB-CABLE creates two devices:
-        - "CABLE Input": A system output device — we write soundboard audio here.
+        - "CABLE Input": A system output device — we write Vyber audio here.
         - "CABLE Output": A system input device — voice chat apps use this as a mic.
         """
         self.info = VirtualCableInfo()

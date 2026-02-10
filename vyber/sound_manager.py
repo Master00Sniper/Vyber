@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from soundboard.config import Config
+from vyber.config import Config
 
 SUPPORTED_EXTENSIONS = {".wav", ".flac", ".ogg", ".mp3"}
 

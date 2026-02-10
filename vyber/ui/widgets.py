@@ -1,4 +1,4 @@
-"""Reusable custom widgets for the soundboard UI."""
+"""Reusable custom widgets for the Vyber UI."""
 
 import customtkinter as ctk
 from typing import Callable

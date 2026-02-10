@@ -19,7 +19,7 @@ class SettingsDialog(ctk.CTkToplevel):
                  on_save: Callable[[dict], None] | None = None):
         super().__init__(master)
 
-        self.title("Soundboard Settings")
+        self.title("Vyber Settings")
         self.geometry("500x520")
         self.resizable(False, False)
         self.transient(master)

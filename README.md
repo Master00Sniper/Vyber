@@ -1,4 +1,4 @@
-# Soundboard
+# Vyber
 
 A Python soundboard that plays audio through your speakers **and** your virtual microphone simultaneously — so people in Discord, TeamSpeak, or any voice chat can hear your sounds without any manual audio routing setup.
 
@@ -25,7 +25,7 @@ A Python soundboard that plays audio through your speakers **and** your virtual 
    ```
    pip install -r requirements.txt
    ```
-3. Run the soundboard:
+3. Run Vyber:
    ```
    python run.py
    ```

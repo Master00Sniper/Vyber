@@ -7,16 +7,16 @@ from tkinter import filedialog, simpledialog, messagebox
 
 import customtkinter as ctk
 
-from soundboard.config import Config
-from soundboard.audio_engine import AudioEngine
-from soundboard.virtual_cable import VirtualCableManager
-from soundboard.sound_manager import SoundManager, SUPPORTED_EXTENSIONS
-from soundboard.hotkey_manager import HotkeyManager
-from soundboard.ui.main_window import MainWindow
-from soundboard.ui.settings_dialog import SettingsDialog
+from vyber.config import Config
+from vyber.audio_engine import AudioEngine
+from vyber.virtual_cable import VirtualCableManager
+from vyber.sound_manager import SoundManager, SUPPORTED_EXTENSIONS
+from vyber.hotkey_manager import HotkeyManager
+from vyber.ui.main_window import MainWindow
+from vyber.ui.settings_dialog import SettingsDialog
 
 
-class SoundboardApp:
+class VyberApp:
     """Top-level application controller."""
 
     def __init__(self):
@@ -34,7 +34,7 @@ class SoundboardApp:
 
         # Build the GUI
         self.root = ctk.CTk()
-        self.root.title("Soundboard")
+        self.root.title("Vyber")
         self.root.geometry(
             f"{self.config.get('window', 'width', default=900)}x"
             f"{self.config.get('window', 'height', default=600)}"

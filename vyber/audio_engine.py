@@ -276,7 +276,7 @@ class AudioEngine:
 
     def _cable_callback(self, outdata: np.ndarray, frames: int,
                         time_info, status):
-        """Callback for virtual cable output — mixes soundboard + mic."""
+        """Callback for virtual cable output — mixes Vyber audio + mic."""
         mixed = self._mix_playing_sounds(frames)
 
         # Mix in microphone passthrough

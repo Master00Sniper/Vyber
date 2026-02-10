@@ -1,4 +1,4 @@
-"""Configuration management for the Soundboard application."""
+"""Configuration management for the Vyber application."""
 
 import json
 import os
@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 # Default config directory
-CONFIG_DIR = Path.home() / ".soundboard"
+CONFIG_DIR = Path.home() / ".vyber"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 DEFAULT_CONFIG = {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Entry point for the Soundboard application."""
+"""Entry point for the Vyber application."""
 
 import sys
 import os
@@ -7,11 +7,11 @@ import os
 # Ensure the project root is on the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from soundboard.app import SoundboardApp
+from vyber.app import VyberApp
 
 
 def main():
-    app = SoundboardApp()
+    app = VyberApp()
     app.run()
 
 

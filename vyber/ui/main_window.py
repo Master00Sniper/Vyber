@@ -3,12 +3,12 @@
 import customtkinter as ctk
 from typing import Callable
 
-from soundboard.ui.widgets import VolumeSlider, OutputModeSelector, StatusBar
-from soundboard.ui.sound_grid import SoundGrid
+from vyber.ui.widgets import VolumeSlider, OutputModeSelector, StatusBar
+from vyber.ui.sound_grid import SoundGrid
 
 
 class MainWindow:
-    """The main soundboard window."""
+    """The main Vyber window."""
 
     def __init__(self, root: ctk.CTk, callbacks: dict[str, Callable]):
         """
