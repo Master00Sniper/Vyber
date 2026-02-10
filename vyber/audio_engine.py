@@ -101,7 +101,7 @@ class PlayingSound:
 
         count = min(num_frames, remaining)
         samples = self.clip.data[self.position:self.position + count].copy()
-        samples *= self.volume
+        samples *= self.volume ** 2.5
         self.position += count
 
         if count < num_frames:
