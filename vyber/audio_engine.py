@@ -336,8 +336,8 @@ class AudioEngine:
             # Clean up finished sounds
             self.playing = [p for p in self.playing if not p.finished]
 
-        # Apply master volume and clamp
-        mixed *= self.master_volume
+        # Apply master volume with exponential curve for perceptual loudness
+        mixed *= self.master_volume ** 2.5
         np.clip(mixed, -1.0, 1.0, out=mixed)
         return mixed
 
