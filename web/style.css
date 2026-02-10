@@ -193,6 +193,20 @@ nav ul a:hover {
     flex-wrap: wrap;
 }
 
+/* ===== Ko-fi Button ===== */
+.kofi-button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.kofi-button-container .kofi-button {
+    height: 48px !important;
+    line-height: 48px !important;
+    padding: 0 1.5rem !important;
+    font-size: 0.95rem !important;
+}
+
 /* ===== Features ===== */
 .features {
     padding: 6rem 4rem;
@@ -415,6 +429,24 @@ footer {
     border-top: 1px solid var(--border);
     color: var(--text-secondary);
     font-size: 0.85rem;
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.footer-links a {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+
+.footer-links a:hover {
+    color: var(--accent-hover);
 }
 
 /* ===== Responsive ===== */
