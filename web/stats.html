@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Vyber Stats Dashboard</title>
+    <link rel="icon" type="image/png" href="../images/tray_icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #111118;
+            --bg-card: #1a1a2e;
+            --text-primary: #ffffff;
+            --text-secondary: #888899;
+            --accent: #7c3aed;
+            --accent-hover: #a78bfa;
+            --accent-glow: rgba(124, 58, 237, 0.4);
+            --accent-dim: #5b21b6;
+            --border: #2d2d44;
+            --metallic-light: #e8e8f0;
+            --metallic-mid: #a0a0b8;
+            --metallic-dark: #606078;
+            --success: #22c55e;
+            --warning: #eab308;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(180deg, var(--metallic-light) 0%, var(--metallic-mid) 50%, var(--metallic-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px var(--accent-glow);
+            filter: drop-shadow(0 0 3px var(--accent));
+        }
+
+        .logo img {
+            width: 32px;
+            height: 32px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-hover);
+        }
+
+        /* Main Content */
+        .dashboard {
+            padding: 6rem 2rem 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .dashboard-header h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard-header p {
+            color: var(--text-secondary);
+        }
+
+        .last-updated {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.1);
+        }
+
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-hover);
+        }
+
+        .stat-card .subtext {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Details Table */
+        .details-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .details-section h2 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .details-table th,
+        .details-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .details-table th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .details-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .details-table tr:hover td {
+            background: rgba(124, 58, 237, 0.05);
+        }
+
+        /* Loading & Error States */
+        .loading {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--accent);
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Refresh Button */
+        .refresh-btn {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .refresh-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+
+        /* Footer */
+        footer {
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .dashboard {
+                padding: 5rem 1rem 2rem;
+            }
+
+            .stat-card .value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html" class="logo">
+            <img src="../images/tray_icon.png" alt="Vyber">
+            VYBER
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="https://github.com/Master00Sniper/Vyber">GitHub</a></li>
+        </ul>
+    </nav>
+
+    <main class="dashboard">
+        <div class="dashboard-header">
+            <h1>Stats Dashboard</h1>
+            <p>Vyber usage statistics</p>
+            <div class="last-updated" id="last-updated"></div>
+        </div>
+
+        <div id="content">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Loading stats...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Vyber Stats Dashboard &mdash; Not linked from main site</p>
+    </footer>
+
+    <script>
+        // TODO: Update these once the Vyber telemetry proxy is configured
+        const API_URL = 'https://vyber-proxy.mortonapps.com/stats';
+        const AUTH_TOKEN = 'REPLACE_WITH_VYBER_AUTH_TOKEN';
+
+        async function fetchStats() {
+            try {
+                const response = await fetch(API_URL, {
+                    headers: {
+                        'X-Vyber-Auth': AUTH_TOKEN
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderStats(data);
+            } catch (error) {
+                renderError(error.message);
+            }
+        }
+
+        function renderStats(data) {
+            const content = document.getElementById('content');
+
+            let html = `
+                <div style="text-align: right; margin-bottom: 1rem;">
+                    <button class="refresh-btn" onclick="fetchStats()">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                            <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                <div class="stats-grid">
+            `;
+
+            if (typeof data === 'object') {
+                const statMappings = {
+                    'total_users': { label: 'Total Users' },
+                    'total_installs': { label: 'Total Installs' },
+                    'active_users': { label: 'Active Users' },
+                    'daily_active': { label: 'Daily Active' },
+                    'weekly_active': { label: 'Weekly Active' },
+                    'monthly_active': { label: 'Monthly Active' },
+                    'total_sessions': { label: 'Total Sessions' },
+                    'total_events': { label: 'Total Events' },
+                    'app_starts': { label: 'App Starts' },
+                    'sounds_played': { label: 'Sounds Played' },
+                    'hotkeys_used': { label: 'Hotkeys Used' },
+                    'heartbeats': { label: 'Heartbeats' }
+                };
+
+                for (const [key, value] of Object.entries(data)) {
+                    if (typeof value === 'number' || typeof value === 'string') {
+                        const mapping = statMappings[key] || { label: formatLabel(key) };
+                        html += `
+                            <div class="stat-card">
+                                <div class="label">${mapping.label}</div>
+                                <div class="value">${formatValue(value)}</div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            html += '</div>';
+
+            // Nested objects as detail tables
+            if (typeof data === 'object') {
+                for (const [key, value] of Object.entries(data)) {
+                    if (typeof value === 'object' && value !== null) {
+                        html += `
+                            <div class="details-section">
+                                <h2>${formatLabel(key)}</h2>
+                                <table class="details-table">
+                                    <tbody>
+                        `;
+                        for (const [subKey, subValue] of Object.entries(value)) {
+                            html += `
+                                <tr>
+                                    <td>${formatLabel(subKey)}</td>
+                                    <td>${formatValue(subValue)}</td>
+                                </tr>
+                            `;
+                        }
+                        html += '</tbody></table></div>';
+                    }
+                }
+            }
+
+            // Raw JSON
+            html += `
+                <div class="details-section">
+                    <h2>Raw Data</h2>
+                    <pre style="background: var(--bg-primary); padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; color: var(--text-secondary);">${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+
+            content.innerHTML = html;
+            document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleString()}`;
+        }
+
+        function renderError(message) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="error">
+                    <div class="error-icon">&#9888;&#65039;</div>
+                    <h2>Failed to load stats</h2>
+                    <p>${message}</p>
+                    <br>
+                    <button class="refresh-btn" onclick="fetchStats()">Try Again</button>
+                </div>
+            `;
+        }
+
+        function formatLabel(key) {
+            return key
+                .replace(/_/g, ' ')
+                .replace(/([A-Z])/g, ' $1')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+        }
+
+        function formatValue(value) {
+            if (typeof value === 'number') {
+                return value.toLocaleString();
+            }
+            return value;
+        }
+
+        fetchStats();
+    </script>
+</body>
+</html>
