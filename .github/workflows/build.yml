@@ -1,0 +1,125 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install nuitka ordered-set zstandard requests
+
+      - name: Extract version
+        id: version
+        shell: pwsh
+        run: |
+          $versionLine = Select-String -Path "vyber\__init__.py" -Pattern '__version__ = "([^"]+)"'
+          $version = $versionLine.Matches[0].Groups[1].Value
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Building version: $version"
+
+      - name: Build with Nuitka
+        shell: pwsh
+        run: |
+          $VERSION = "${{ steps.version.outputs.VERSION }}"
+          python -m nuitka `
+            --standalone `
+            --onefile `
+            --assume-yes-for-downloads `
+            --msvc=latest `
+            --windows-console-mode=disable `
+            --windows-icon-from-ico=images/vyber.ico `
+            --output-filename=Vyber.exe `
+            --output-dir=dist `
+            --company-name="Morton Apps" `
+            --product-name="Vyber" `
+            --file-version=$VERSION `
+            --product-version=$VERSION `
+            --file-description="Vyber - Soundboard with Virtual Mic Routing" `
+            --copyright="Copyright (c) 2026 Greg Morton. All rights reserved." `
+            --enable-plugin=tk-inter `
+            --include-data-dir=images=images `
+            --include-data-dir=sounds=sounds `
+            --include-module=vyber `
+            --include-module=vyber.app `
+            --include-module=vyber.audio_engine `
+            --include-module=vyber.config `
+            --include-module=vyber.hotkey_manager `
+            --include-module=vyber.sound_manager `
+            --include-module=vyber.virtual_cable `
+            --include-module=vyber.vb_cable_installer `
+            --include-module=vyber.tray_manager `
+            --include-module=vyber.ui `
+            --include-module=vyber.ui.main_window `
+            --include-module=vyber.ui.settings_dialog `
+            --include-module=vyber.ui.sound_grid `
+            --include-module=vyber.ui.widgets `
+            --include-module=customtkinter `
+            --include-package-data=customtkinter `
+            --include-module=PIL `
+            --include-module=PIL.Image `
+            --include-module=PIL.ImageTk `
+            --include-module=sounddevice `
+            --include-module=soundfile `
+            --include-module=numpy `
+            --include-module=keyboard `
+            --include-module=pystray `
+            --include-module=pydub `
+            --include-module=updater `
+            --include-module=requests `
+            --include-module=certifi `
+            run.py
+
+      - name: Verify build
+        run: |
+          if (Test-Path "dist/Vyber.exe") {
+            $size = (Get-Item "dist/Vyber.exe").Length / 1MB
+            Write-Host "Build successful: Vyber.exe ($([math]::Round($size, 2)) MB)"
+          } else {
+            Write-Host "ERROR: Vyber.exe not found!"
+            exit 1
+          }
+        shell: pwsh
+
+      - name: Read release notes
+        id: release_notes
+        shell: pwsh
+        run: |
+          if (Test-Path "RELEASE_NOTES.md") {
+            $notes = Get-Content "RELEASE_NOTES.md" -Raw
+            # Escape for GitHub Actions
+            $notes = $notes -replace '%', '%25'
+            $notes = $notes -replace "`n", '%0A'
+            $notes = $notes -replace "`r", ''
+            echo "NOTES=$notes" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "NOTES=Release ${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Vyber ${{ github.ref_name }}"
+          body_path: RELEASE_NOTES.md
+          files: |
+            dist/Vyber.exe
+            LICENSE
+          draft: false
+          prerelease: false

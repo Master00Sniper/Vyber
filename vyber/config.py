@@ -2,12 +2,29 @@
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
-# Default config directory
-CONFIG_DIR = Path.home() / ".vyber"
+
+def _get_data_dir() -> Path:
+    """Return the Vyber data directory, platform-appropriate.
+
+    Windows: %APPDATA%\\Vyber   (e.g. C:\\Users\\<user>\\AppData\\Roaming\\Vyber)
+    Other:   ~/.vyber
+    """
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            return Path(appdata) / "Vyber"
+    return Path.home() / ".vyber"
+
+
+# Default config / data directory
+DATA_DIR = _get_data_dir()
+CONFIG_DIR = DATA_DIR
 CONFIG_FILE = CONFIG_DIR / "config.json"
+LOG_FILE = DATA_DIR / "vyber_log.txt"
 
 DEFAULT_CONFIG = {
     "sounds_directory": "",
@@ -22,12 +39,15 @@ DEFAULT_CONFIG = {
         "mic_device": None,
         "virtual_cable_device": None,
         "output_mode": "both",  # "speakers", "mic", "both"
-        "master_volume": 0.8,
+        "master_volume": 0.5,
         "mic_passthrough": True
     },
+    "preferences": {
+        "sound_overlap": "overlap"  # "overlap" or "stop"
+    },
     "window": {
-        "width": 900,
-        "height": 600
+        "width": 1100,
+        "height": 650
     }
 }
 

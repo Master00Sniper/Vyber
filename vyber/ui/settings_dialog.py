@@ -16,33 +16,54 @@ class SettingsDialog(ctk.CTkToplevel):
                  current_mic: int | None,
                  current_stop_hotkey: str,
                  mic_passthrough: bool,
-                 on_save: Callable[[dict], None] | None = None):
+                 sound_overlap: str = "overlap",
+                 on_save: Callable[[dict], None] | None = None,
+                 on_install_vb_cable: Callable[[], None] | None = None,
+                 icon_path: str | None = None):
         super().__init__(master)
 
         self.title("Vyber Settings")
-        self.geometry("500x520")
+        self.geometry("500x580")
         self.resizable(False, False)
         self.transient(master)
         self.grab_set()
 
+        # Center on parent window
+        self.update_idletasks()
+        pw, ph = master.winfo_width(), master.winfo_height()
+        px, py = master.winfo_x(), master.winfo_y()
+        dw, dh = self.winfo_width(), self.winfo_height()
+        x = px + (pw - dw) // 2
+        y = py + (ph - dh) // 2
+        self.geometry(f"500x580+{x}+{y}")
+
+        # Set Vyber icon
+        if icon_path:
+            self.after(200, lambda: self.iconbitmap(icon_path))
+
         self._on_save = on_save
+        self._on_install_vb_cable = on_install_vb_cable
         self._output_devices = output_devices
         self._input_devices = input_devices
 
         self._build_ui(
             output_devices, input_devices, cable_installed,
             current_speaker, current_mic, current_stop_hotkey,
-            mic_passthrough
+            mic_passthrough, sound_overlap
         )
 
     def _build_ui(self, output_devices, input_devices, cable_installed,
                   current_speaker, current_mic, current_stop_hotkey,
-                  mic_passthrough):
+                  mic_passthrough, sound_overlap):
 
-        pad = {"padx": 20, "pady": (10, 5)}
+        # Scrollable content in case the window is tight
+        content = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=15, pady=(10, 0))
+
+        pad = {"padx": 10, "pady": (8, 4)}
 
         # --- VB-CABLE Status ---
-        status_frame = ctk.CTkFrame(self)
+        status_frame = ctk.CTkFrame(content)
         status_frame.pack(fill="x", **pad)
 
         ctk.CTkLabel(status_frame, text="VB-CABLE Status",
@@ -59,15 +80,29 @@ class SettingsDialog(ctk.CTkToplevel):
                 text="Not detected. Install VB-CABLE to enable mic output.",
                 text_color="#FF5722"
             ).pack(anchor="w", padx=10, pady=(0, 5))
+
+            btn_row = ctk.CTkFrame(status_frame, fg_color="transparent")
+            btn_row.pack(anchor="w", padx=10, pady=(0, 10))
+
+            if self._on_install_vb_cable:
+                ctk.CTkButton(
+                    btn_row,
+                    text="Install VB-CABLE",
+                    width=160,
+                    command=self._handle_install_vb_cable,
+                ).pack(side="left", padx=(0, 8))
+
             ctk.CTkButton(
-                status_frame,
-                text="Download VB-CABLE (Free)",
-                width=200,
-                command=lambda: webbrowser.open("https://vb-audio.com/Cable/")
-            ).pack(anchor="w", padx=10, pady=(0, 10))
+                btn_row,
+                text="Manual Download",
+                width=140,
+                fg_color="#37474F",
+                hover_color="#546E7A",
+                command=lambda: webbrowser.open("https://vb-audio.com/Cable/"),
+            ).pack(side="left")
 
         # --- Speaker Device ---
-        ctk.CTkLabel(self, text="Speaker Output Device",
+        ctk.CTkLabel(content, text="Speaker Output Device",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", **pad)
 
@@ -81,12 +116,13 @@ class SettingsDialog(ctk.CTkToplevel):
 
         self.speaker_var = ctk.StringVar(value=current_speaker_name)
         self.speaker_dropdown = ctk.CTkOptionMenu(
-            self, values=speaker_names, variable=self.speaker_var, width=400
+            content, values=speaker_names, variable=self.speaker_var,
+            width=400
         )
-        self.speaker_dropdown.pack(anchor="w", padx=20, pady=(0, 10))
+        self.speaker_dropdown.pack(anchor="w", padx=10, pady=(0, 8))
 
         # --- Microphone Device ---
-        ctk.CTkLabel(self, text="Microphone Input Device",
+        ctk.CTkLabel(content, text="Microphone Input Device",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", **pad)
 
@@ -100,31 +136,59 @@ class SettingsDialog(ctk.CTkToplevel):
 
         self.mic_var = ctk.StringVar(value=current_mic_name)
         self.mic_dropdown = ctk.CTkOptionMenu(
-            self, values=mic_names, variable=self.mic_var, width=400
+            content, values=mic_names, variable=self.mic_var, width=400
         )
-        self.mic_dropdown.pack(anchor="w", padx=20, pady=(0, 10))
+        self.mic_dropdown.pack(anchor="w", padx=10, pady=(0, 8))
 
         # --- Mic Passthrough ---
         self.passthrough_var = ctk.BooleanVar(value=mic_passthrough)
         ctk.CTkCheckBox(
-            self, text="Mix microphone audio into virtual cable (mic passthrough)",
+            content,
+            text="Mix microphone audio into virtual cable (mic passthrough)",
             variable=self.passthrough_var
-        ).pack(anchor="w", padx=20, pady=5)
+        ).pack(anchor="w", padx=10, pady=5)
 
         # --- Stop All Hotkey ---
-        ctk.CTkLabel(self, text="Stop All Hotkey",
+        ctk.CTkLabel(content, text="Stop All Hotkey",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(
             anchor="w", **pad)
 
         self.hotkey_var = ctk.StringVar(value=current_stop_hotkey)
         self.hotkey_entry = ctk.CTkEntry(
-            self, textvariable=self.hotkey_var, width=200
+            content, textvariable=self.hotkey_var, width=200
         )
-        self.hotkey_entry.pack(anchor="w", padx=20, pady=(0, 10))
+        self.hotkey_entry.pack(anchor="w", padx=10, pady=(0, 8))
 
-        # --- Buttons ---
+        # --- Replay Behavior ---
+        ctk.CTkLabel(content, text="Replay Behavior",
+                     font=ctk.CTkFont(size=14, weight="bold")).pack(
+            anchor="w", **pad)
+
+        ctk.CTkLabel(
+            content,
+            text="When clicking a sound that is already playing:",
+            text_color="gray",
+        ).pack(anchor="w", padx=10, pady=(0, 4))
+
+        self.overlap_var = ctk.StringVar(value=sound_overlap)
+
+        ctk.CTkRadioButton(
+            content,
+            text="Play another instance (layer on top)",
+            variable=self.overlap_var,
+            value="overlap",
+        ).pack(anchor="w", padx=20, pady=2)
+
+        ctk.CTkRadioButton(
+            content,
+            text="Stop the sound",
+            variable=self.overlap_var,
+            value="stop",
+        ).pack(anchor="w", padx=20, pady=2)
+
+        # --- Save / Cancel buttons ---
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=20, pady=20)
+        btn_frame.pack(fill="x", padx=15, pady=(8, 12))
 
         ctk.CTkButton(
             btn_frame, text="Save", width=100,
@@ -136,6 +200,12 @@ class SettingsDialog(ctk.CTkToplevel):
             fg_color="#37474F", hover_color="#546E7A",
             command=self.destroy
         ).pack(side="right", padx=5)
+
+    def _handle_install_vb_cable(self):
+        """Start the VB-CABLE install and close the dialog."""
+        self.destroy()
+        if self._on_install_vb_cable:
+            self._on_install_vb_cable()
 
     def _save(self):
         """Collect settings and call on_save callback."""
@@ -161,7 +231,8 @@ class SettingsDialog(ctk.CTkToplevel):
             "speaker_device": speaker_index,
             "mic_device": mic_index,
             "mic_passthrough": self.passthrough_var.get(),
-            "stop_all_hotkey": self.hotkey_var.get().strip() or "escape"
+            "stop_all_hotkey": self.hotkey_var.get().strip() or "escape",
+            "sound_overlap": self.overlap_var.get(),
         }
 
         if self._on_save:

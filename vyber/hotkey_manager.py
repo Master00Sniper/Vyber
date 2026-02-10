@@ -1,9 +1,12 @@
 """Global hotkey management — works even when the app is not focused."""
 
+import logging
 import threading
 from typing import Callable
 
 import keyboard
+
+logger = logging.getLogger(__name__)
 
 
 class HotkeyManager:
@@ -83,7 +86,7 @@ class HotkeyManager:
             keyboard.add_hotkey(hotkey, lambda cb=callback: self._safe_call(cb),
                                 suppress=False, trigger_on_release=False)
         except Exception as e:
-            print(f"Failed to register hotkey '{hotkey}': {e}")
+            logger.warning("Failed to register hotkey '%s': %s", hotkey, e)
 
     def _unbind(self, hotkey: str):
         """Unregister a single hotkey."""

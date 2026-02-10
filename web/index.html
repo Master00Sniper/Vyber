@@ -3,84 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vyber</title>
+    <title>Vyber - Soundboard with Virtual Mic Routing</title>
+    <meta name="description" content="Play sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming.">
+    <link rel="icon" type="image/png" href="images/tray_icon.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
         <nav>
-            <a href="#" class="logo">Vyber</a>
+            <a href="#" class="logo">
+                <img src="images/tray_icon.png" alt="Vyber">
+                Vyber
+            </a>
             <ul>
                 <li><a href="#features">Features</a></li>
-                <li><a href="#setup">Setup</a></li>
+                <li><a href="#discord">Discord Setup</a></li>
+                <li><a href="#setup">Get Started</a></li>
                 <li><a href="#download">Download</a></li>
+                <li><a href="https://github.com/Master00Sniper/Vyber">GitHub</a></li>
             </ul>
         </nav>
     </header>
 
+    <!-- ===== Hero ===== -->
     <section class="hero">
         <div class="hero-content">
-            <h1>Vyber</h1>
-            <p class="tagline">Play sounds through your speakers and microphone at the same time. No complicated audio routing required.</p>
-            <a href="#download" class="btn">Download</a>
+            <img src="images/vyber_splash.png" alt="Vyber" class="hero-logo">
+            <h1>Your Sounds, Their Ears</h1>
+            <p class="tagline">Play audio through your speakers and microphone at the same time. Built for Discord, gaming, and streaming — no complicated audio routing required.</p>
+            <div class="btn-group">
+                <a href="https://vyber-proxy.mortonapps.com/download/latest" class="btn">Download Vyber</a>
+                <a href="https://github.com/Master00Sniper/Vyber" class="btn btn-secondary">View on GitHub</a>
+            </div>
         </div>
     </section>
 
+    <!-- ===== Features ===== -->
     <section id="features" class="features">
         <h2>Features</h2>
+        <p class="section-sub">Everything you need for a soundboard that actually works in voice chat.</p>
         <div class="feature-grid">
             <div class="feature-card">
+                <span class="icon">&#127911;</span>
                 <h3>Dual Audio Output</h3>
                 <p>Play sounds through your speakers and virtual microphone simultaneously. People in voice chat hear your sounds instantly.</p>
             </div>
             <div class="feature-card">
-                <h3>Zero Configuration</h3>
-                <p>Install VB-CABLE once and Vyber handles all the audio routing automatically. No manual setup needed.</p>
+                <span class="icon">&#9889;</span>
+                <h3>One-Click Setup</h3>
+                <p>Vyber installs VB-CABLE for you and handles all audio routing automatically. Just download and run.</p>
             </div>
             <div class="feature-card">
+                <span class="icon">&#127908;</span>
                 <h3>Mic Passthrough</h3>
                 <p>Your voice and soundboard audio are mixed together so you can talk and play sounds at the same time.</p>
             </div>
             <div class="feature-card">
+                <span class="icon">&#9000;</span>
                 <h3>Global Hotkeys</h3>
-                <p>Trigger sounds with keyboard shortcuts that work even while you're in a game or another app.</p>
+                <p>Trigger any sound with a keyboard shortcut that works even while you're in a game or another app.</p>
             </div>
             <div class="feature-card">
+                <span class="icon">&#128193;</span>
                 <h3>Organized Library</h3>
-                <p>Organize your sounds into tabbed categories. Add, rename, and manage sounds with an intuitive interface.</p>
+                <p>Sort your sounds into tabbed categories. Add, rename, reorder, and manage everything with drag-and-drop.</p>
             </div>
             <div class="feature-card">
+                <span class="icon">&#9209;</span>
                 <h3>Instant Stop</h3>
-                <p>Cut all audio immediately with a stop-all button or hotkey. Stay in control at all times.</p>
+                <p>Cut all audio immediately with the stop-all button or hotkey. Stay in control at all times.</p>
             </div>
         </div>
     </section>
 
+    <!-- ===== Discord Setup ===== -->
+    <section id="discord" class="discord-setup">
+        <h2>Discord Setup</h2>
+        <p class="section-sub">A few quick settings changes so Discord plays nicely with Vyber.</p>
+        <div class="discord-steps">
+            <div class="discord-step">
+                <div class="discord-step-num">1</div>
+                <div class="discord-step-content">
+                    <h3>Set Your Input Device</h3>
+                    <p>In Discord, go to <strong>Settings &gt; Voice &amp; Video</strong>. Under INPUT DEVICE, select <code>CABLE Output (VB-Audio Virtual Cable)</code>.</p>
+                </div>
+            </div>
+            <div class="discord-step">
+                <div class="discord-step-num">2</div>
+                <div class="discord-step-content">
+                    <h3>Disable Voice Processing</h3>
+                    <p>Scroll down to the Voice Processing section and turn these off:</p>
+                    <ul class="toggle-list">
+                        <li><span class="toggle-off">OFF</span> Krisp Noise Suppression</li>
+                        <li><span class="toggle-off">OFF</span> Echo Cancellation</li>
+                        <li><span class="toggle-off">OFF</span> Automatic Gain Control</li>
+                        <li><span class="toggle-off">OFF</span> Advanced Voice Activity</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="discord-step">
+                <div class="discord-step-num">3</div>
+                <div class="discord-step-content">
+                    <h3>Advanced Voice Settings</h3>
+                    <p>Expand "Advanced Voice Settings" at the bottom and also disable:</p>
+                    <ul class="toggle-list">
+                        <li><span class="toggle-off">OFF</span> Automatic Gain Control</li>
+                        <li><span class="toggle-off">OFF</span> Advanced Voice Activity</li>
+                        <li><span class="toggle-off">OFF</span> Bypass System Audio Input Processing</li>
+                        <li><span class="toggle-off">OFF</span> No Audio Detected Warning</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="discord-step">
+                <div class="discord-step-num">4</div>
+                <div class="discord-step-content">
+                    <h3>Set Global Attenuation to 0%</h3>
+                    <p>This prevents Discord from lowering the volume of other applications when someone is speaking, which can interfere with Vyber's audio output.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== Getting Started ===== -->
     <section id="setup" class="setup">
         <h2>Getting Started</h2>
         <div class="steps">
             <div class="step">
                 <span class="step-number">1</span>
-                <h3>Install VB-CABLE</h3>
-                <p>Download and install <a href="https://vb-audio.com/Cable/">VB-CABLE</a> (free). Reboot your PC.</p>
+                <h3>Download Vyber</h3>
+                <p>Grab the latest <strong>.exe</strong> from the download section below. No install wizard — just run it.</p>
             </div>
             <div class="step">
                 <span class="step-number">2</span>
-                <h3>Install Dependencies</h3>
-                <p>Run <code>pip install -r requirements.txt</code> in the project directory.</p>
+                <h3>Install VB-CABLE</h3>
+                <p>Vyber will prompt you to install <a href="https://vb-audio.com/Cable/">VB-CABLE</a> on first launch. Reboot after installing.</p>
             </div>
             <div class="step">
                 <span class="step-number">3</span>
-                <h3>Launch &amp; Play</h3>
-                <p>Run <code>python run.py</code>, add your sounds, and set your voice chat input to CABLE Output.</p>
+                <h3>Add Sounds &amp; Play</h3>
+                <p>Add your audio files, set the output to "Both", and configure Discord using the guide above.</p>
             </div>
         </div>
     </section>
 
+    <!-- ===== Download ===== -->
     <section id="download" class="download">
         <h2>Download</h2>
-        <p>Get the latest version from GitHub.</p>
-        <a href="#" class="btn">View on GitHub</a>
+        <p>Get the latest version — free, open source, no account needed.</p>
+        <div class="btn-group">
+            <a href="https://vyber-proxy.mortonapps.com/download/latest" class="btn">Download Latest (.exe)</a>
+            <a href="https://github.com/Master00Sniper/Vyber/releases" class="btn btn-secondary">All Releases</a>
+        </div>
     </section>
 
     <footer>

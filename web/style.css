@@ -5,14 +5,19 @@
 }
 
 :root {
-    --bg-primary: #0f0f0f;
-    --bg-secondary: #1a1a2e;
-    --bg-card: #16213e;
-    --accent: #7c3aed;
-    --accent-hover: #6d28d9;
-    --text-primary: #e2e8f0;
-    --text-secondary: #94a3b8;
-    --border: #2d2d44;
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #111111;
+    --bg-card: #161616;
+    --accent: #e30000;
+    --accent-hover: #ff1a1a;
+    --accent-glow: rgba(227, 0, 0, 0.35);
+    --accent-dim: #990000;
+    --text-primary: #e8e8e8;
+    --text-secondary: #888888;
+    --border: #252525;
+    --chrome-light: #e8e8f0;
+    --chrome-mid: #a0a0b8;
+    --chrome-dark: #606078;
 }
 
 body {
@@ -23,21 +28,22 @@ body {
 }
 
 a {
-    color: var(--accent);
+    color: var(--accent-hover);
     text-decoration: none;
 }
 
 a:hover {
-    color: var(--accent-hover);
+    color: #ff4040;
 }
 
-/* Navigation */
+/* ===== Navigation ===== */
 nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 4rem;
-    background-color: var(--bg-secondary);
+    padding: 1rem 4rem;
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
@@ -45,9 +51,19 @@ nav {
 }
 
 nav .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--text-primary);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+}
+
+nav .logo img {
+    width: 32px;
+    height: 32px;
 }
 
 nav ul {
@@ -58,6 +74,7 @@ nav ul {
 
 nav ul a {
     color: var(--text-secondary);
+    font-size: 0.95rem;
     transition: color 0.2s;
 }
 
@@ -65,53 +82,89 @@ nav ul a:hover {
     color: var(--text-primary);
 }
 
-/* Hero */
+/* ===== Hero ===== */
 .hero {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 70vh;
+    min-height: 85vh;
     text-align: center;
     padding: 4rem 2rem;
-    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+    background:
+        radial-gradient(ellipse at 50% 30%, rgba(227, 0, 0, 0.08) 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+}
+
+.hero-content {
+    max-width: 700px;
+}
+
+.hero-logo {
+    width: 320px;
+    max-width: 80vw;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 0 40px var(--accent-glow));
 }
 
 .hero h1 {
-    font-size: 4rem;
+    font-size: 3.5rem;
     font-weight: 800;
     margin-bottom: 1rem;
-    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    letter-spacing: 0.02em;
+    background: linear-gradient(180deg, var(--chrome-light) 0%, var(--chrome-mid) 60%, var(--chrome-dark) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
 
 .hero .tagline {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     color: var(--text-secondary);
-    max-width: 600px;
-    margin: 0 auto 2rem;
+    max-width: 560px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.7;
 }
 
-/* Buttons */
+/* ===== Buttons ===== */
 .btn {
     display: inline-block;
-    padding: 0.75rem 2rem;
-    background-color: var(--accent);
+    padding: 0.8rem 2.2rem;
+    background: var(--accent);
     color: white;
     border-radius: 8px;
     font-weight: 600;
     font-size: 1rem;
-    transition: background-color 0.2s, transform 0.2s;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
 }
 
 .btn:hover {
-    background-color: var(--accent-hover);
+    background: var(--accent-hover);
     color: white;
     transform: translateY(-2px);
+    box-shadow: 0 6px 24px var(--accent-glow);
 }
 
-/* Features */
+.btn-secondary {
+    background: #222;
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: #2a2a2a;
+    border-color: var(--accent);
+    box-shadow: 0 6px 24px rgba(227, 0, 0, 0.1);
+}
+
+.btn-group {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* ===== Features ===== */
 .features {
     padding: 6rem 4rem;
     text-align: center;
@@ -119,24 +172,30 @@ nav ul a:hover {
 
 .features h2 {
     font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.features .section-sub {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
     margin-bottom: 3rem;
 }
 
 .feature-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    max-width: 1200px;
+    gap: 1.5rem;
+    max-width: 1100px;
     margin: 0 auto;
 }
 
 .feature-card {
-    background-color: var(--bg-card);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 2rem;
     text-align: left;
-    transition: transform 0.2s, border-color 0.2s;
+    transition: transform 0.2s, border-color 0.3s;
 }
 
 .feature-card:hover {
@@ -144,21 +203,116 @@ nav ul a:hover {
     border-color: var(--accent);
 }
 
-.feature-card h3 {
-    font-size: 1.25rem;
+.feature-card .icon {
+    font-size: 1.75rem;
     margin-bottom: 0.75rem;
+    display: block;
+}
+
+.feature-card h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.6rem;
     color: var(--text-primary);
 }
 
 .feature-card p {
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: 0.93rem;
+    line-height: 1.6;
 }
 
-/* Setup */
+/* ===== Discord Setup ===== */
+.discord-setup {
+    padding: 6rem 4rem;
+    background: var(--bg-secondary);
+    text-align: center;
+}
+
+.discord-setup h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.discord-setup .section-sub {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    margin-bottom: 3rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.discord-steps {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.discord-step {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    align-items: flex-start;
+}
+
+.discord-step-num {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.discord-step-content h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+}
+
+.discord-step-content p {
+    color: var(--text-secondary);
+    font-size: 0.93rem;
+    line-height: 1.6;
+}
+
+.discord-step-content code {
+    background: var(--bg-primary);
+    color: var(--accent-hover);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+.toggle-list {
+    list-style: none;
+    margin-top: 0.5rem;
+}
+
+.toggle-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.93rem;
+    color: var(--text-secondary);
+}
+
+.toggle-off {
+    color: var(--accent-hover);
+    font-weight: 700;
+    font-size: 0.8rem;
+    min-width: 28px;
+}
+
+/* ===== Getting Started ===== */
 .setup {
     padding: 6rem 4rem;
-    background-color: var(--bg-secondary);
     text-align: center;
 }
 
@@ -186,18 +340,20 @@ nav ul a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
-    background-color: var(--accent);
+    width: 52px;
+    height: 52px;
+    background: var(--accent);
     color: white;
     border-radius: 50%;
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: 700;
     margin-bottom: 1rem;
+    box-shadow: 0 4px 16px var(--accent-glow);
 }
 
 .step h3 {
     margin-bottom: 0.5rem;
+    font-size: 1.1rem;
 }
 
 .step p {
@@ -205,17 +361,11 @@ nav ul a:hover {
     font-size: 0.95rem;
 }
 
-.step code {
-    background-color: var(--bg-primary);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-}
-
-/* Download */
+/* ===== Download ===== */
 .download {
     padding: 6rem 4rem;
     text-align: center;
+    background: var(--bg-secondary);
 }
 
 .download h2 {
@@ -229,7 +379,7 @@ nav ul a:hover {
     font-size: 1.1rem;
 }
 
-/* Footer */
+/* ===== Footer ===== */
 footer {
     padding: 2rem 4rem;
     text-align: center;
@@ -238,28 +388,44 @@ footer {
     font-size: 0.85rem;
 }
 
-/* Responsive */
+/* ===== Responsive ===== */
 @media (max-width: 768px) {
     nav {
-        padding: 1rem 2rem;
+        padding: 1rem 1.5rem;
     }
 
     nav ul {
         gap: 1rem;
     }
 
+    .hero {
+        min-height: 70vh;
+        padding: 3rem 1.5rem;
+    }
+
     .hero h1 {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
+    }
+
+    .hero-logo {
+        width: 220px;
     }
 
     .features,
+    .discord-setup,
     .setup,
     .download {
-        padding: 4rem 2rem;
+        padding: 4rem 1.5rem;
     }
 
     .steps {
         flex-direction: column;
         align-items: center;
+    }
+
+    .discord-step {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
     }
 }

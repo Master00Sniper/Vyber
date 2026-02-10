@@ -147,6 +147,16 @@ class SoundManager:
                 return True
         return False
 
+    def update_sound_path(self, category: str, sound_name: str,
+                          new_path: str) -> bool:
+        """Update the file path of a sound entry."""
+        for sound in self.categories.get(category, []):
+            if sound.name == sound_name:
+                sound.path = new_path
+                self.save_to_config()
+                return True
+        return False
+
     def move_sound(self, from_category: str, to_category: str,
                    sound_name: str) -> bool:
         """Move a sound from one category to another."""
@@ -183,6 +193,18 @@ class SoundManager:
                 self.save_to_config()
                 return True
         return False
+
+    def reorder_sound(self, category: str, sound_name: str,
+                      new_index: int) -> bool:
+        """Move a sound to a new position within its category."""
+        sounds = self.categories.get(category, [])
+        sound = next((s for s in sounds if s.name == sound_name), None)
+        if sound is None:
+            return False
+        sounds.remove(sound)
+        sounds.insert(min(new_index, len(sounds)), sound)
+        self.save_to_config()
+        return True
 
     def get_all_hotkey_mappings(self) -> dict[str, tuple[str, SoundEntry]]:
         """Get all hotkey -> (category, sound) mappings."""

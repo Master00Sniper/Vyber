@@ -1,8 +1,11 @@
 """Main application window — ties together all UI components."""
 
 import customtkinter as ctk
+from tkinter import Menu
 from typing import Callable
+from PIL import Image
 
+from vyber import IMAGES_DIR
 from vyber.ui.widgets import VolumeSlider, OutputModeSelector, StatusBar
 from vyber.ui.sound_grid import SoundGrid
 
@@ -54,7 +57,7 @@ class MainWindow:
         self.volume_slider = VolumeSlider(
             self.top_frame,
             label="Volume",
-            initial=0.8,
+            initial=0.5,
             on_change=self.callbacks.get("on_volume_change")
         )
         self.volume_slider.pack(side="left", padx=15)
@@ -83,6 +86,18 @@ class MainWindow:
         )
         self.settings_button.pack(side="right", padx=5)
 
+        # Discord Setup guide button
+        self.discord_button = ctk.CTkButton(
+            self.top_frame,
+            text="Discord Setup",
+            width=110,
+            height=32,
+            fg_color="#5865F2",
+            hover_color="#4752C4",
+            command=self.callbacks.get("on_discord_guide")
+        )
+        self.discord_button.pack(side="right", padx=5)
+
         # Add category button
         self.add_cat_button = ctk.CTkButton(
             self.top_frame,
@@ -99,6 +114,9 @@ class MainWindow:
         self.tabview = ctk.CTkTabview(self.root)
         self.tabview.pack(fill="both", expand=True, padx=10, pady=5)
 
+        # Right-click on tab headers to delete categories
+        self._bind_tab_context_menu()
+
         # --- Status bar ---
         self.status_bar = StatusBar(self.root)
         self.status_bar.pack(fill="x", padx=10, pady=(0, 5))
@@ -113,16 +131,21 @@ class MainWindow:
             category=name,
             on_play=self.callbacks.get("on_play"),
             on_add=self.callbacks.get("on_add_sound"),
+            on_add_folder=self.callbacks.get("on_add_folder"),
             on_remove=self.callbacks.get("on_remove_sound"),
+            on_delete_file=self.callbacks.get("on_delete_file"),
             on_rename=self.callbacks.get("on_rename_sound"),
+            on_rename_file=self.callbacks.get("on_rename_file"),
             on_set_hotkey=self.callbacks.get("on_set_hotkey"),
             on_move=self.callbacks.get("on_move_sound"),
             on_volume=self.callbacks.get("on_volume_sound"),
+            on_reorder=self.callbacks.get("on_reorder_sound"),
             get_categories=self.callbacks.get("get_categories")
         )
         grid.pack(fill="both", expand=True)
         grid.populate(sounds)
         self._tab_grids[name] = grid
+        self._bind_tab_context_menu()
 
     def remove_category_tab(self, name: str):
         """Remove a category tab."""
@@ -147,6 +170,52 @@ class MainWindow:
         for name, sounds in categories.items():
             self.add_category_tab(name, sounds)
 
+    def _bind_tab_context_menu(self):
+        """Bind right-click on tab headers for category management."""
+        try:
+            seg_button = self.tabview._segmented_button
+            # CTkSegmentedButton doesn't support .bind() directly,
+            # so bind on the underlying tk frame and its children
+            tk_frame = seg_button._canvas if hasattr(seg_button, '_canvas') else None
+            targets = list(seg_button.winfo_children())
+            if tk_frame:
+                targets.append(tk_frame)
+            for widget in targets:
+                try:
+                    widget.bind("<Button-3>", self._tab_context_menu)
+                except (NotImplementedError, AttributeError):
+                    pass
+                # Also bind on grandchildren (the actual button labels)
+                for grandchild in widget.winfo_children():
+                    try:
+                        grandchild.bind("<Button-3>", self._tab_context_menu)
+                    except (NotImplementedError, AttributeError):
+                        pass
+        except (AttributeError, NotImplementedError):
+            pass
+
+    def _tab_context_menu(self, event):
+        """Show right-click menu on the current tab."""
+        current = self.tabview.get()
+        if not current:
+            return
+        menu = Menu(self.root, tearoff=0)
+        menu.configure(
+            bg="#2b2b2b", fg="white", activebackground="#404040",
+            activeforeground="white"
+        )
+        if current == "General":
+            menu.add_command(
+                label="Delete All Sounds",
+                command=lambda: self.callbacks["on_clear_category"](current)
+            )
+        else:
+            menu.add_command(
+                label=f"Delete \"{current}\"",
+                command=lambda: self.callbacks["on_remove_category"](current)
+            )
+        menu.tk_popup(event.x_root, event.y_root)
+
     def set_cable_status(self, installed: bool, name: str = ""):
         self.status_bar.set_cable_status(installed, name)
 
@@ -158,6 +227,15 @@ class MainWindow:
 
     def set_output_mode(self, mode: str):
         self.output_mode.set(mode)
+
+    def set_cable_available(self, available: bool):
+        """Enable or disable mic-dependent output modes."""
+        self.output_mode.set_cable_available(available)
+
+    def update_playing_states(self, playing_remaining: dict[str, float]):
+        """Update gold pulse and countdown on all sound buttons across all tabs."""
+        for grid in self._tab_grids.values():
+            grid.update_playing_states(playing_remaining)
 
     def set_volume(self, volume: float):
         self.volume_slider.set(volume)
