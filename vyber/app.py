@@ -14,6 +14,7 @@ from vyber.sound_manager import SoundManager, SUPPORTED_EXTENSIONS
 from vyber.hotkey_manager import HotkeyManager
 from vyber.ui.main_window import MainWindow
 from vyber.ui.settings_dialog import SettingsDialog
+from vyber import vb_cable_installer
 
 
 class VyberApp:
@@ -31,6 +32,8 @@ class VyberApp:
 
         # Configure audio engine from config/detected devices
         self._configure_audio()
+
+        self._install_pending = False
 
         # Build the GUI
         self.root = ctk.CTk()
@@ -80,6 +83,10 @@ class VyberApp:
         # Set initial output mode
         mode = self.config.get("audio", "output_mode", default="both")
         self.main_window.set_output_mode(mode)
+
+        # Prompt VB-CABLE install if not detected
+        if not self.cable_info.installed:
+            self.root.after(500, self._prompt_vb_cable_install)
 
         # Register hotkeys
         self._register_hotkeys()
@@ -302,7 +309,8 @@ class VyberApp:
             current_stop_hotkey=self.config.get("hotkeys", "stop_all",
                                                  default="escape"),
             mic_passthrough=self.audio_engine.mic_passthrough,
-            on_save=self._apply_settings
+            on_save=self._apply_settings,
+            on_install_vb_cable=self._start_vb_cable_install,
         )
 
     def _apply_settings(self, settings: dict):
@@ -323,3 +331,66 @@ class VyberApp:
 
         # Re-register hotkeys with new stop-all key
         self._register_hotkeys()
+
+    # --- VB-CABLE guided install ---
+
+    def _prompt_vb_cable_install(self):
+        """Show a dialog offering to install VB-CABLE if not detected."""
+        answer = messagebox.askyesno(
+            "VB-CABLE Not Detected",
+            "VB-CABLE virtual audio driver is required for microphone "
+            "output.\n\n"
+            "Would you like to download and install it now?\n"
+            "(You will need to approve an admin prompt.)",
+            parent=self.root,
+        )
+        if answer:
+            self._start_vb_cable_install()
+
+    def _start_vb_cable_install(self):
+        """Kick off the background download-and-install process."""
+        if self._install_pending:
+            return
+        self._install_pending = True
+        self.main_window.set_cable_status(False, "Installing...")
+
+        vb_cable_installer.download_and_install(
+            on_progress=lambda msg: self.root.after(
+                0, self.main_window.set_cable_status, False, msg
+            ),
+            on_success=lambda: self.root.after(0, self._on_install_finished),
+            on_error=lambda err: self.root.after(
+                0, self._on_install_error, err
+            ),
+        )
+
+    def _on_install_finished(self):
+        """Called when the VB-CABLE installer has been launched."""
+        self._install_pending = False
+        messagebox.showinfo(
+            "VB-CABLE Installer",
+            "The VB-CABLE installer has been launched.\n\n"
+            "After it finishes, please restart Vyber so the new "
+            "audio device can be detected.",
+            parent=self.root,
+        )
+        # Re-scan immediately in case the driver is already active
+        self.cable_info = self.cable_manager.detect()
+        if self.cable_info.installed:
+            self._configure_audio()
+            self.audio_engine.start()
+        self.main_window.set_cable_status(
+            self.cable_info.installed, self.cable_info.input_device_name
+        )
+
+    def _on_install_error(self, error_msg: str):
+        """Called when the install process fails."""
+        self._install_pending = False
+        self.main_window.set_cable_status(False, "")
+        messagebox.showerror(
+            "Installation Failed",
+            f"{error_msg}\n\n"
+            "You can install VB-CABLE manually from:\n"
+            "https://vb-audio.com/Cable/",
+            parent=self.root,
+        )

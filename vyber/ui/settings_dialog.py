@@ -16,7 +16,8 @@ class SettingsDialog(ctk.CTkToplevel):
                  current_mic: int | None,
                  current_stop_hotkey: str,
                  mic_passthrough: bool,
-                 on_save: Callable[[dict], None] | None = None):
+                 on_save: Callable[[dict], None] | None = None,
+                 on_install_vb_cable: Callable[[], None] | None = None):
         super().__init__(master)
 
         self.title("Vyber Settings")
@@ -26,6 +27,7 @@ class SettingsDialog(ctk.CTkToplevel):
         self.grab_set()
 
         self._on_save = on_save
+        self._on_install_vb_cable = on_install_vb_cable
         self._output_devices = output_devices
         self._input_devices = input_devices
 
@@ -59,12 +61,26 @@ class SettingsDialog(ctk.CTkToplevel):
                 text="Not detected. Install VB-CABLE to enable mic output.",
                 text_color="#FF5722"
             ).pack(anchor="w", padx=10, pady=(0, 5))
+
+            btn_row = ctk.CTkFrame(status_frame, fg_color="transparent")
+            btn_row.pack(anchor="w", padx=10, pady=(0, 10))
+
+            if self._on_install_vb_cable:
+                ctk.CTkButton(
+                    btn_row,
+                    text="Install VB-CABLE",
+                    width=160,
+                    command=self._handle_install_vb_cable,
+                ).pack(side="left", padx=(0, 8))
+
             ctk.CTkButton(
-                status_frame,
-                text="Download VB-CABLE (Free)",
-                width=200,
-                command=lambda: webbrowser.open("https://vb-audio.com/Cable/")
-            ).pack(anchor="w", padx=10, pady=(0, 10))
+                btn_row,
+                text="Manual Download",
+                width=140,
+                fg_color="#37474F",
+                hover_color="#546E7A",
+                command=lambda: webbrowser.open("https://vb-audio.com/Cable/"),
+            ).pack(side="left")
 
         # --- Speaker Device ---
         ctk.CTkLabel(self, text="Speaker Output Device",
@@ -136,6 +152,12 @@ class SettingsDialog(ctk.CTkToplevel):
             fg_color="#37474F", hover_color="#546E7A",
             command=self.destroy
         ).pack(side="right", padx=5)
+
+    def _handle_install_vb_cable(self):
+        """Start the VB-CABLE install and close the dialog."""
+        self.destroy()
+        if self._on_install_vb_cable:
+            self._on_install_vb_cable()
 
     def _save(self):
         """Collect settings and call on_save callback."""
