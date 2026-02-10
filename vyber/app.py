@@ -635,8 +635,6 @@ class VyberApp:
         toggles = [
             ("Krisp Noise Suppression", "Will filter out your sound effects"),
             ("Echo Cancellation", "Causes audio artifacts on played sounds"),
-            ("Automatic Gain Control", "Fluctuates volume unpredictably"),
-            ("Advanced Voice Activity", "Can block soundboard audio from transmitting"),
         ]
         for name, reason in toggles:
             row = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -721,16 +719,15 @@ class VyberApp:
 
     def _prompt_vb_cable_install(self):
         """Show a dialog offering to install VB-CABLE if not detected."""
-        answer = messagebox.askyesno(
-            "VB-CABLE Not Detected",
-            "VB-CABLE virtual audio driver is required for microphone "
-            "output.\n\n"
-            "Would you like to download and install it now?\n"
-            "(You will need to approve an admin prompt.)",
+        messagebox.showinfo(
+            "VB-CABLE Required",
+            "Vyber requires the VB-CABLE virtual audio driver to send "
+            "sounds through voice chat.\n\n"
+            "Press OK to download and install VB-CABLE.\n"
+            "You will need to approve an admin prompt.",
             parent=self.root,
         )
-        if answer:
-            self._start_vb_cable_install()
+        self._start_vb_cable_install()
 
     def _start_vb_cable_install(self):
         """Kick off the background download-and-install process."""
@@ -753,10 +750,9 @@ class VyberApp:
         """Called when the VB-CABLE installer has been launched."""
         self._install_pending = False
         messagebox.showinfo(
-            "VB-CABLE Installer",
-            "The VB-CABLE installer has been launched.\n\n"
-            "After it finishes, please restart Vyber so the new "
-            "audio device can be detected.",
+            "Restart Required",
+            "VB-CABLE has been installed.\n\n"
+            "Please restart your computer to finish the installation.",
             parent=self.root,
         )
         # Re-scan immediately in case the driver is already active
