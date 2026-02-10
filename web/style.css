@@ -125,6 +125,35 @@ nav ul a:hover {
     line-height: 1.7;
 }
 
+/* ===== Under Development Banner ===== */
+.under-dev-banner {
+    margin: 0 auto 2rem;
+    max-width: 500px;
+    padding: 1.25rem 1.5rem;
+    background: rgba(227, 0, 0, 0.08);
+    border: 1px solid var(--accent-dim);
+    border-radius: 12px;
+}
+
+.under-dev-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.under-dev-banner p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
 /* ===== Buttons ===== */
 .btn {
     display: inline-block;
