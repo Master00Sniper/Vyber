@@ -2,6 +2,17 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request));
 });
 
+// Known routes — reject everything else early
+const KNOWN_ROUTES = ['/download/latest', '/telemetry', '/stats'];
+const ALLOWED_REPO_PREFIX = '/repos/Master00Sniper/Vyber/';
+
+// Rate limit: max requests per IP for the public download endpoint
+const DOWNLOAD_RATE_LIMIT = 30;   // requests per window
+const DOWNLOAD_RATE_WINDOW = 3600; // 1 hour in seconds
+
+// Cache TTL for /download/latest (avoids burning GitHub API calls)
+const DOWNLOAD_CACHE_TTL = 600; // 10 minutes
+
 async function handleRequest(request) {
   const url = new URL(request.url);
 
@@ -19,9 +30,45 @@ async function handleRequest(request) {
   }
 
   // =========================================
+  // Early rejection — unknown routes get 404
+  // =========================================
+  const isKnownRoute = KNOWN_ROUTES.includes(url.pathname);
+  const isRepoProxy = url.pathname.startsWith(ALLOWED_REPO_PREFIX);
+  if (!isKnownRoute && !isRepoProxy) {
+    return new Response('Not Found', { status: 404 });
+  }
+
+  // =========================================
   // Download latest release (PUBLIC - no auth)
+  // Cached + rate-limited to protect GitHub PAT
   // =========================================
   if (url.pathname === '/download/latest') {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('Method Not Allowed', { status: 405 });
+    }
+
+    // --- Per-IP rate limiting via KV ---
+    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const rateLimitKey = `ratelimit:download:${clientIP}`;
+    const hitCount = parseInt(await VYBER_TELEMETRY.get(rateLimitKey) || '0');
+    if (hitCount >= DOWNLOAD_RATE_LIMIT) {
+      return new Response('Too Many Requests', {
+        status: 429,
+        headers: { 'Retry-After': '3600' }
+      });
+    }
+    await VYBER_TELEMETRY.put(rateLimitKey, (hitCount + 1).toString(), {
+      expirationTtl: DOWNLOAD_RATE_WINDOW
+    });
+
+    // --- Check Cloudflare Cache first ---
+    const cacheKey = new Request(url.toString(), request);
+    const cache = caches.default;
+    let cachedResponse = await cache.match(cacheKey);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
     try {
       const releaseResponse = await fetch(
         'https://api.github.com/repos/Master00Sniper/Vyber/releases/latest',
@@ -49,8 +96,20 @@ async function handleRequest(request) {
         return new Response('No download found', { status: 404 });
       }
 
-      // Redirect to the download URL
-      return Response.redirect(asset.browser_download_url, 302);
+      // Build a cacheable redirect response
+      const redirectResponse = new Response(null, {
+        status: 302,
+        headers: {
+          'Location': asset.browser_download_url,
+          'Cache-Control': `public, max-age=${DOWNLOAD_CACHE_TTL}`,
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+
+      // Store in Cloudflare edge cache
+      await cache.put(cacheKey, redirectResponse.clone());
+
+      return redirectResponse;
     } catch (e) {
       return new Response('Error fetching download', { status: 500 });
     }
@@ -150,7 +209,7 @@ async function handleRequest(request) {
   }
 
   // =========================================
-  // GitHub API Proxy (existing functionality)
+  // GitHub API Proxy — restricted to Vyber repo
   // =========================================
   const githubUrl = `https://api.github.com${url.pathname}${url.search}`;
 
