@@ -21,11 +21,14 @@ logger = logging.getLogger(__name__)
 
 GITHUB_OWNER = "Master00Sniper"
 GITHUB_REPO = "Vyber"
-GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+PROXY_BASE_URL = "https://vyber-proxy.mortonapps.com"
+GITHUB_API_URL = f"{PROXY_BASE_URL}/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+AUTH_KEY = "ufxknajtcpqylxuvtumanhypesbtexsq"
 
 HEADERS = {
     "Accept": "application/vnd.github.v3+json",
     "User-Agent": "Vyber-Updater/1.0",
+    "X-Vyber-Auth": AUTH_KEY,
 }
 
 # Tracks downloaded update waiting to be applied
