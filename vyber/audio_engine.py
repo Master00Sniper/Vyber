@@ -118,7 +118,7 @@ class AudioEngine:
     def __init__(self):
         self.playing: list[PlayingSound] = []
         self.lock = threading.Lock()
-        self.master_volume: float = 0.8
+        self.master_volume: float = 0.5
 
         # Output mode: "speakers", "mic", "both"
         self.output_mode: str = "both"

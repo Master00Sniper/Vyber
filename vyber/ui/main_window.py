@@ -57,7 +57,7 @@ class MainWindow:
         self.volume_slider = VolumeSlider(
             self.top_frame,
             label="Volume",
-            initial=0.8,
+            initial=0.5,
             on_change=self.callbacks.get("on_volume_change")
         )
         self.volume_slider.pack(side="left", padx=15)

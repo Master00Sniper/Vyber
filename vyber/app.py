@@ -93,7 +93,7 @@ class VyberApp:
         self.main_window.set_cable_available(self.cable_info.installed)
 
         # Set initial volume from config
-        vol = self.config.get("audio", "master_volume", default=0.8)
+        vol = self.config.get("audio", "master_volume", default=0.5)
         self.main_window.set_volume(vol)
         self.audio_engine.set_master_volume(vol)
 
@@ -415,23 +415,41 @@ class VyberApp:
             self._refresh_tab(target)
 
     def _on_volume_sound(self, category: str, sound_name: str):
-        """Adjust per-sound volume."""
+        """Adjust per-sound volume with a slider dialog."""
         current = 1.0
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
                 current = sound.volume
                 break
 
-        value = simpledialog.askfloat(
-            "Sound Volume",
-            f"Volume for '{sound_name}' (0.0 to 1.0):",
-            initialvalue=current,
-            minvalue=0.0,
-            maxvalue=1.0,
-            parent=self.root
-        )
-        if value is not None:
-            self.sound_manager.set_sound_volume(category, sound_name, value)
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title(f"Volume — {sound_name}")
+        dialog.geometry("300x130")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        label = ctk.CTkLabel(dialog, text=f"{int(current * 100)}%",
+                             font=ctk.CTkFont(size=14))
+        label.pack(pady=(12, 0))
+
+        slider = ctk.CTkSlider(dialog, from_=0, to=1, number_of_steps=100,
+                                width=250)
+        slider.set(current)
+        slider.pack(pady=8)
+
+        def on_slide(val):
+            label.configure(text=f"{int(float(val) * 100)}%")
+
+        slider.configure(command=on_slide)
+
+        def on_ok():
+            self.sound_manager.set_sound_volume(
+                category, sound_name, round(slider.get(), 2))
+            dialog.destroy()
+
+        ctk.CTkButton(dialog, text="OK", width=80,
+                       command=on_ok).pack(pady=(0, 10))
 
     def _on_volume_change(self, value: float):
         """Master volume changed."""

@@ -39,7 +39,7 @@ DEFAULT_CONFIG = {
         "mic_device": None,
         "virtual_cable_device": None,
         "output_mode": "both",  # "speakers", "mic", "both"
-        "master_volume": 0.8,
+        "master_volume": 0.5,
         "mic_passthrough": True
     },
     "preferences": {
