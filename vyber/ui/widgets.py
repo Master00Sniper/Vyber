@@ -46,6 +46,7 @@ class OutputModeSelector(ctk.CTkFrame):
                  on_change: Callable[[str], None] | None = None, **kwargs):
         super().__init__(master, **kwargs)
         self._on_change = on_change
+        self._buttons: dict[str, ctk.CTkRadioButton] = {}
 
         self.label = ctk.CTkLabel(self, text="Output:", width=50, anchor="w")
         self.label.pack(side="left", padx=(5, 5))
@@ -59,6 +60,7 @@ class OutputModeSelector(ctk.CTkFrame):
                 value=value, command=self._mode_changed
             )
             btn.pack(side="left", padx=5)
+            self._buttons[value] = btn
 
     def _mode_changed(self):
         if self._on_change:
@@ -69,6 +71,18 @@ class OutputModeSelector(ctk.CTkFrame):
 
     def set(self, mode: str):
         self._mode_var.set(mode)
+
+    def set_cable_available(self, available: bool):
+        """Enable or disable Mic and Both modes based on VB-CABLE status."""
+        for mode in ("mic", "both"):
+            btn = self._buttons.get(mode)
+            if btn:
+                btn.configure(state="normal" if available else "disabled")
+        # If currently on a disabled mode, fall back to speakers
+        if not available and self._mode_var.get() in ("mic", "both"):
+            self._mode_var.set("speakers")
+            if self._on_change:
+                self._on_change("speakers")
 
 
 class StatusBar(ctk.CTkFrame):

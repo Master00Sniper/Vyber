@@ -159,5 +159,9 @@ class MainWindow:
     def set_output_mode(self, mode: str):
         self.output_mode.set(mode)
 
+    def set_cable_available(self, available: bool):
+        """Enable or disable mic-dependent output modes."""
+        self.output_mode.set_cable_available(available)
+
     def set_volume(self, volume: float):
         self.volume_slider.set(volume)
