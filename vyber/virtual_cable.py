@@ -1,7 +1,9 @@
 """VB-CABLE virtual audio device detection and configuration."""
 
+import logging
 import sounddevice as sd
 
+logger = logging.getLogger(__name__)
 
 VB_CABLE_KEYWORDS = ["cable", "vb-audio", "virtual cable"]
 
@@ -37,28 +39,41 @@ class VirtualCableManager:
         self.info = VirtualCableInfo()
         try:
             devices = sd.query_devices()
-        except Exception:
+        except Exception as e:
+            logger.error("Failed to query audio devices: %s", e)
             return self.info
 
+        logger.info("Scanning %d audio devices for VB-CABLE...", len(devices))
         for i, device in enumerate(devices):
-            name_lower = device["name"].lower()
+            name = device["name"]
+            name_lower = name.lower()
+            in_ch = device["max_input_channels"]
+            out_ch = device["max_output_channels"]
+
             if not any(kw in name_lower for kw in VB_CABLE_KEYWORDS):
                 continue
 
-            # "CABLE Input" is an output device (we send audio TO it)
-            if device["max_output_channels"] > 0 and "input" in name_lower:
-                self.info.input_device_index = i
-                self.info.input_device_name = device["name"]
+            logger.info("  VB-CABLE candidate [%d]: '%s' (in=%d, out=%d)",
+                        i, name, in_ch, out_ch)
 
-            # "CABLE Output" is an input device (apps read FROM it as a mic)
-            if device["max_input_channels"] > 0 and "output" in name_lower:
-                self.info.output_device_index = i
-                self.info.output_device_name = device["name"]
+            # "CABLE Input" is a system output device — we write audio TO it.
+            # Match by output channels, prefer names containing "input".
+            if out_ch > 0 and self.info.input_device_index is None:
+                if "input" in name_lower or "output" not in name_lower:
+                    self.info.input_device_index = i
+                    self.info.input_device_name = name
 
-        self.info.installed = (
-            self.info.input_device_index is not None
-            and self.info.output_device_index is not None
-        )
+            # "CABLE Output" is a system input device — apps read FROM it.
+            if in_ch > 0 and self.info.output_device_index is None:
+                if "output" in name_lower or "input" not in name_lower:
+                    self.info.output_device_index = i
+                    self.info.output_device_name = name
+
+        self.info.installed = self.info.input_device_index is not None
+        logger.info("VB-CABLE detected: %s (input_dev=%s, output_dev=%s)",
+                    self.info.installed,
+                    self.info.input_device_name or "none",
+                    self.info.output_device_name or "none")
         return self.info
 
     def get_cable_input_index(self) -> int | None:
