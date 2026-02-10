@@ -3,6 +3,7 @@
 import ctypes
 import logging
 import os
+from pathlib import Path
 import platform
 import sys
 import threading
@@ -321,6 +322,15 @@ class VyberApp:
         logger.info("Stop all sounds")
         self.audio_engine.stop_all()
 
+    @staticmethod
+    def _default_sound_dir() -> str:
+        """Return the best default directory for file dialogs (Music > Documents > Home)."""
+        home = Path.home()
+        for folder in (home / "Music", home / "Documents", home):
+            if folder.is_dir():
+                return str(folder)
+        return str(home)
+
     def _on_add_sound(self, category: str):
         """Open file dialog to add a sound."""
         filetypes = [
@@ -330,6 +340,7 @@ class VyberApp:
         paths = filedialog.askopenfilenames(
             title="Add Sounds",
             filetypes=filetypes,
+            initialdir=self._default_sound_dir(),
             parent=self.root
         )
         for path in paths:
@@ -343,6 +354,7 @@ class VyberApp:
         """Open folder dialog to add all sounds in a directory."""
         folder = filedialog.askdirectory(
             title="Add Folder of Sounds",
+            initialdir=self._default_sound_dir(),
             parent=self.root
         )
         if folder:
