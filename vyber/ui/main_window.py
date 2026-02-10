@@ -1,0 +1,163 @@
+"""Main application window — ties together all UI components."""
+
+import customtkinter as ctk
+from typing import Callable
+
+from vyber.ui.widgets import VolumeSlider, OutputModeSelector, StatusBar
+from vyber.ui.sound_grid import SoundGrid
+
+
+class MainWindow:
+    """The main Vyber window."""
+
+    def __init__(self, root: ctk.CTk, callbacks: dict[str, Callable]):
+        """
+        Args:
+            root: The CTk root window.
+            callbacks: Dict of callback functions from the app controller:
+                - on_play(category, sound_name)
+                - on_stop_all()
+                - on_add_sound(category)
+                - on_remove_sound(category, sound_name)
+                - on_rename_sound(category, sound_name)
+                - on_set_hotkey(category, sound_name)
+                - on_move_sound(category, sound_name)
+                - on_volume_sound(category, sound_name)
+                - on_volume_change(value)
+                - on_output_mode_change(mode)
+                - on_add_category()
+                - on_remove_category(name)
+                - on_open_settings()
+                - get_categories() -> list[str]
+        """
+        self.root = root
+        self.callbacks = callbacks
+        self._tab_grids: dict[str, SoundGrid] = {}
+
+        self._build_ui()
+
+    def _build_ui(self):
+        """Construct the main window layout."""
+        # --- Top control bar ---
+        self.top_frame = ctk.CTkFrame(self.root)
+        self.top_frame.pack(fill="x", padx=10, pady=(10, 5))
+
+        # Output mode selector
+        self.output_mode = OutputModeSelector(
+            self.top_frame,
+            initial="both",
+            on_change=self.callbacks.get("on_output_mode_change")
+        )
+        self.output_mode.pack(side="left", padx=5)
+
+        # Master volume
+        self.volume_slider = VolumeSlider(
+            self.top_frame,
+            label="Volume",
+            initial=0.8,
+            on_change=self.callbacks.get("on_volume_change")
+        )
+        self.volume_slider.pack(side="left", padx=15)
+
+        # Stop all button
+        self.stop_button = ctk.CTkButton(
+            self.top_frame,
+            text="Stop All",
+            width=90,
+            height=32,
+            fg_color="#B71C1C",
+            hover_color="#D32F2F",
+            command=self.callbacks.get("on_stop_all")
+        )
+        self.stop_button.pack(side="left", padx=10)
+
+        # Settings button
+        self.settings_button = ctk.CTkButton(
+            self.top_frame,
+            text="Settings",
+            width=80,
+            height=32,
+            fg_color="#37474F",
+            hover_color="#546E7A",
+            command=self.callbacks.get("on_open_settings")
+        )
+        self.settings_button.pack(side="right", padx=5)
+
+        # Add category button
+        self.add_cat_button = ctk.CTkButton(
+            self.top_frame,
+            text="+ Category",
+            width=90,
+            height=32,
+            fg_color="#2B5B2B",
+            hover_color="#3A7A3A",
+            command=self.callbacks.get("on_add_category")
+        )
+        self.add_cat_button.pack(side="right", padx=5)
+
+        # --- Tab view for categories ---
+        self.tabview = ctk.CTkTabview(self.root)
+        self.tabview.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # --- Status bar ---
+        self.status_bar = StatusBar(self.root)
+        self.status_bar.pack(fill="x", padx=10, pady=(0, 5))
+
+    def add_category_tab(self, name: str, sounds: list):
+        """Add a category tab with its sound grid."""
+        self.tabview.add(name)
+        tab_frame = self.tabview.tab(name)
+
+        grid = SoundGrid(
+            tab_frame,
+            category=name,
+            on_play=self.callbacks.get("on_play"),
+            on_add=self.callbacks.get("on_add_sound"),
+            on_remove=self.callbacks.get("on_remove_sound"),
+            on_rename=self.callbacks.get("on_rename_sound"),
+            on_set_hotkey=self.callbacks.get("on_set_hotkey"),
+            on_move=self.callbacks.get("on_move_sound"),
+            on_volume=self.callbacks.get("on_volume_sound"),
+            get_categories=self.callbacks.get("get_categories")
+        )
+        grid.pack(fill="both", expand=True)
+        grid.populate(sounds)
+        self._tab_grids[name] = grid
+
+    def remove_category_tab(self, name: str):
+        """Remove a category tab."""
+        if name in self._tab_grids:
+            del self._tab_grids[name]
+        try:
+            self.tabview.delete(name)
+        except Exception:
+            pass
+
+    def refresh_category(self, name: str, sounds: list):
+        """Refresh the sound grid for a category."""
+        if name in self._tab_grids:
+            self._tab_grids[name].populate(sounds)
+
+    def refresh_all(self, categories: dict[str, list]):
+        """Rebuild all tabs."""
+        # Remove existing tabs
+        for name in list(self._tab_grids.keys()):
+            self.remove_category_tab(name)
+        # Recreate
+        for name, sounds in categories.items():
+            self.add_category_tab(name, sounds)
+
+    def set_cable_status(self, installed: bool, name: str = ""):
+        self.status_bar.set_cable_status(installed, name)
+
+    def set_playing_count(self, count: int):
+        self.status_bar.set_playing_count(count)
+
+    def set_device_info(self, text: str):
+        self.status_bar.set_device_info(text)
+
+    def set_output_mode(self, mode: str):
+        self.output_mode.set(mode)
+
+    def set_volume(self, volume: float):
+        self.volume_slider.set(volume)
