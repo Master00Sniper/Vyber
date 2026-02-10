@@ -880,8 +880,11 @@ class VyberApp:
                         self.root.after(0, lambda: desc_textbox.delete(
                             "1.0", "end"))
                     else:
+                        detail = resp.text[:200]
+                        logger.error("Bug report failed: HTTP %d — %s",
+                                     resp.status_code, detail)
                         self.root.after(0, lambda: status_label.configure(
-                            text=f"Failed (HTTP {resp.status_code})",
+                            text=f"Failed (HTTP {resp.status_code}): {detail}",
                             text_color="#ff6b6b"))
                 except requests.exceptions.Timeout:
                     self.root.after(0, lambda: status_label.configure(
