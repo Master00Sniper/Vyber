@@ -128,11 +128,13 @@ class MainWindow:
             category=name,
             on_play=self.callbacks.get("on_play"),
             on_add=self.callbacks.get("on_add_sound"),
+            on_add_folder=self.callbacks.get("on_add_folder"),
             on_remove=self.callbacks.get("on_remove_sound"),
             on_rename=self.callbacks.get("on_rename_sound"),
             on_set_hotkey=self.callbacks.get("on_set_hotkey"),
             on_move=self.callbacks.get("on_move_sound"),
             on_volume=self.callbacks.get("on_volume_sound"),
+            on_reorder=self.callbacks.get("on_reorder_sound"),
             get_categories=self.callbacks.get("get_categories")
         )
         grid.pack(fill="both", expand=True)

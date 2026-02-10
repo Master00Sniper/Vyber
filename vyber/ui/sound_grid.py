@@ -2,7 +2,7 @@
 
 import os
 import customtkinter as ctk
-from tkinter import filedialog, simpledialog, Menu
+from tkinter import Menu
 from typing import Callable
 
 
@@ -13,6 +13,7 @@ class SoundButton(ctk.CTkButton):
     _COLOR_HOVER = "#3A6BA5"
     _COLOR_GOLD = "#FFD700"
     _COLOR_GOLD_DIM = "#8B7500"
+    _COLOR_DRAG_TARGET = "#4A7A2B"
 
     def __init__(self, master, sound_name: str, filepath: str = "",
                  hotkey: str | None = None,
@@ -38,10 +39,14 @@ class SoundButton(ctk.CTkButton):
         self._playing = False
         self._pulse_bright = True
         self._pulse_id = None
+        self._drag_blocked = False  # set by grid when drag completes
 
         self.bind("<Button-3>", self._show_context_menu)
 
     def _clicked(self, *_args):
+        if self._drag_blocked:
+            self._drag_blocked = False
+            return
         if self._on_play:
             self._on_play(self.sound_name)
 
@@ -84,28 +89,41 @@ class SoundGrid(ctk.CTkScrollableFrame):
     """Scrollable grid of sound buttons for a single category."""
 
     COLUMNS = 5
+    _DRAG_THRESHOLD = 8  # pixels before drag activates
 
     def __init__(self, master, category: str,
                  on_play: Callable[[str, str], None] | None = None,
                  on_add: Callable[[str], None] | None = None,
+                 on_add_folder: Callable[[str], None] | None = None,
                  on_remove: Callable[[str, str], None] | None = None,
                  on_rename: Callable[[str, str], None] | None = None,
                  on_set_hotkey: Callable[[str, str], None] | None = None,
                  on_move: Callable[[str, str], None] | None = None,
                  on_volume: Callable[[str, str], None] | None = None,
+                 on_reorder: Callable[[str, str, int], None] | None = None,
                  get_categories: Callable[[], list[str]] | None = None,
                  **kwargs):
         super().__init__(master, **kwargs)
         self.category = category
         self._on_play = on_play
         self._on_add = on_add
+        self._on_add_folder = on_add_folder
         self._on_remove = on_remove
         self._on_rename = on_rename
         self._on_set_hotkey = on_set_hotkey
         self._on_move = on_move
         self._on_volume = on_volume
+        self._on_reorder = on_reorder
         self._get_categories = get_categories
         self._buttons: dict[str, SoundButton] = {}
+        self._button_order: list[str] = []  # ordered list of sound names
+
+        # Drag state
+        self._drag_source: str | None = None
+        self._drag_active = False
+        self._drag_start_x = 0
+        self._drag_start_y = 0
+        self._drag_target_btn: SoundButton | None = None
 
         # Add sound button (always at the end)
         self._add_button = ctk.CTkButton(
@@ -121,6 +139,7 @@ class SoundGrid(ctk.CTkScrollableFrame):
         for btn in self._buttons.values():
             btn.destroy()
         self._buttons.clear()
+        self._button_order.clear()
 
         for i, sound in enumerate(sounds):
             btn = SoundButton(
@@ -134,11 +153,99 @@ class SoundGrid(ctk.CTkScrollableFrame):
             row, col = divmod(i, self.COLUMNS)
             btn.grid(row=row, column=col, padx=5, pady=5)
             self._buttons[sound.name] = btn
+            self._button_order.append(sound.name)
+
+            # Drag bindings on all internal widgets of the button
+            self._bind_drag(btn)
 
         # Place Add button at the end
         add_idx = len(sounds)
         row, col = divmod(add_idx, self.COLUMNS)
         self._add_button.grid(row=row, column=col, padx=5, pady=5)
+
+    def _bind_drag(self, btn: SoundButton):
+        """Bind drag events to a sound button and its children."""
+        for widget in [btn] + list(btn.winfo_children()):
+            widget.bind("<ButtonPress-1>", lambda e, b=btn: self._drag_press(e, b), add="+")
+            widget.bind("<B1-Motion>", lambda e, b=btn: self._drag_motion(e, b), add="+")
+            widget.bind("<ButtonRelease-1>", lambda e, b=btn: self._drag_release(e, b), add="+")
+
+    def _drag_press(self, event, btn: SoundButton):
+        """Record start position for potential drag."""
+        self._drag_source = btn.sound_name
+        self._drag_active = False
+        self._drag_start_x = event.x_root
+        self._drag_start_y = event.y_root
+
+    def _drag_motion(self, event, btn: SoundButton):
+        """Activate drag if mouse moved past threshold."""
+        if self._drag_source is None:
+            return
+
+        dx = abs(event.x_root - self._drag_start_x)
+        dy = abs(event.y_root - self._drag_start_y)
+        if not self._drag_active and (dx > self._DRAG_THRESHOLD or dy > self._DRAG_THRESHOLD):
+            self._drag_active = True
+            # Dim the source button
+            src_btn = self._buttons.get(self._drag_source)
+            if src_btn:
+                src_btn.configure(fg_color="#1A3050")
+
+        if self._drag_active:
+            # Highlight the button under the cursor
+            target_widget = self.winfo_containing(event.x_root, event.y_root)
+            target_btn = self._find_sound_button(target_widget)
+
+            # Clear previous highlight
+            if self._drag_target_btn and self._drag_target_btn.sound_name != self._drag_source:
+                self._drag_target_btn.configure(
+                    border_width=0 if not self._drag_target_btn._playing else 2
+                )
+            self._drag_target_btn = None
+
+            if target_btn and target_btn.sound_name != self._drag_source:
+                target_btn.configure(border_width=2, border_color=SoundButton._COLOR_DRAG_TARGET)
+                self._drag_target_btn = target_btn
+
+    def _drag_release(self, event, btn: SoundButton):
+        """Complete drag or fall through to normal click."""
+        if self._drag_active and self._drag_source:
+            # Block the command callback from firing on the source button
+            src_btn = self._buttons.get(self._drag_source)
+            if src_btn:
+                src_btn._drag_blocked = True
+                src_btn.configure(fg_color=SoundButton._COLOR_NORMAL)
+
+            # Clear target highlight
+            if self._drag_target_btn:
+                self._drag_target_btn.configure(
+                    border_width=0 if not self._drag_target_btn._playing else 2
+                )
+
+            # Find drop target
+            target_widget = self.winfo_containing(event.x_root, event.y_root)
+            target_btn = self._find_sound_button(target_widget)
+
+            if target_btn and target_btn.sound_name != self._drag_source:
+                # Determine target index
+                target_idx = self._button_order.index(target_btn.sound_name)
+                if self._on_reorder:
+                    self._on_reorder(self.category, self._drag_source, target_idx)
+
+        self._drag_source = None
+        self._drag_active = False
+        self._drag_target_btn = None
+
+    def _find_sound_button(self, widget) -> SoundButton | None:
+        """Walk up the widget tree to find a SoundButton ancestor."""
+        while widget is not None:
+            if isinstance(widget, SoundButton) and widget.sound_name in self._buttons:
+                return widget
+            try:
+                widget = widget.master
+            except AttributeError:
+                break
+        return None
 
     def update_playing_states(self, playing_filepaths: set[str]):
         """Update gold pulse on buttons whose sounds are currently playing."""
@@ -150,8 +257,25 @@ class SoundGrid(ctk.CTkScrollableFrame):
             self._on_play(self.category, sound_name)
 
     def _add_sound_clicked(self):
-        if self._on_add:
-            self._on_add(self.category)
+        """Show menu with Add Files / Add Folder options."""
+        menu = Menu(self, tearoff=0)
+        menu.configure(
+            bg="#2b2b2b", fg="white", activebackground="#404040",
+            activeforeground="white"
+        )
+        menu.add_command(
+            label="Add Files...",
+            command=lambda: self._on_add(self.category) if self._on_add else None
+        )
+        menu.add_command(
+            label="Add Folder...",
+            command=lambda: self._on_add_folder(self.category) if self._on_add_folder else None
+        )
+        # Position the menu at the Add button
+        btn = self._add_button
+        x = btn.winfo_rootx()
+        y = btn.winfo_rooty() + btn.winfo_height()
+        menu.tk_popup(x, y)
 
     def _context_menu(self, sound_name: str, event):
         """Show right-click context menu for a sound button."""

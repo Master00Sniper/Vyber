@@ -65,11 +65,13 @@ class VyberApp:
             "on_play": self._on_play,
             "on_stop_all": self._on_stop_all,
             "on_add_sound": self._on_add_sound,
+            "on_add_folder": self._on_add_folder,
             "on_remove_sound": self._on_remove_sound,
             "on_rename_sound": self._on_rename_sound,
             "on_set_hotkey": self._on_set_hotkey,
             "on_move_sound": self._on_move_sound,
             "on_volume_sound": self._on_volume_sound,
+            "on_reorder_sound": self._on_reorder_sound,
             "on_volume_change": self._on_volume_change,
             "on_output_mode_change": self._on_output_mode_change,
             "on_add_category": self._on_add_category,
@@ -254,6 +256,23 @@ class VyberApp:
         if paths:
             self._refresh_tab(category)
             self._register_hotkeys()
+
+    def _on_add_folder(self, category: str):
+        """Open folder dialog to add all sounds in a directory."""
+        folder = filedialog.askdirectory(
+            title="Add Folder of Sounds",
+            parent=self.root
+        )
+        if folder:
+            added = self.sound_manager.add_sounds_from_directory(folder, category)
+            if added:
+                self._refresh_tab(category)
+                self._register_hotkeys()
+
+    def _on_reorder_sound(self, category: str, sound_name: str, new_index: int):
+        """Reorder a sound within its category via drag-and-drop."""
+        self.sound_manager.reorder_sound(category, sound_name, new_index)
+        self._refresh_tab(category)
 
     def _on_remove_sound(self, category: str, sound_name: str):
         """Remove a sound after confirmation."""
