@@ -20,6 +20,7 @@ from vyber.ui.main_window import MainWindow
 from vyber.ui.settings_dialog import SettingsDialog
 from vyber import vb_cable_installer
 from vyber.tray_manager import TrayManager
+from vyber.telemetry import send_telemetry
 import updater
 
 
@@ -126,6 +127,9 @@ class VyberApp:
         )
         self._update_thread.start()
 
+        # Telemetry — record app launch
+        send_telemetry("app_start")
+
     def run(self):
         """Start the application main loop."""
         try:
@@ -184,7 +188,10 @@ class VyberApp:
         for hotkey, (cat, sound) in self.sound_manager.get_all_hotkey_mappings().items():
             filepath = sound.path
             volume = sound.volume
-            mappings[hotkey] = lambda fp=filepath, v=volume: self.audio_engine.play_sound(fp, v)
+            def _hotkey_play(fp=filepath, v=volume):
+                self.audio_engine.play_sound(fp, v)
+                send_telemetry("hotkey_used")
+            mappings[hotkey] = _hotkey_play
 
         stop_key = self.config.get("hotkeys", "stop_all", default="escape")
         self.hotkey_manager.rebind_all(
@@ -218,6 +225,7 @@ class VyberApp:
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
                 self.audio_engine.play_sound(sound.path, sound.volume)
+                send_telemetry("sound_played")
                 break
 
     def _on_stop_all(self):

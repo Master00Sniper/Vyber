@@ -11,6 +11,7 @@ import sys
 import requests
 
 from vyber import __version__ as CURRENT_VERSION
+from vyber.telemetry import send_heartbeat
 
 logger = logging.getLogger(__name__)
 
@@ -292,6 +293,7 @@ def periodic_update_check(stop_event, show_notification_func=None, check_interva
             check_count += 1
             logger.info("Periodic update check #%d", check_count)
             check_for_updates(show_notification_func)
+            send_heartbeat()
         except Exception as e:
             logger.error("Error in periodic check: %s", e)
 
