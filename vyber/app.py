@@ -69,11 +69,12 @@ class VyberApp:
         # Populate tabs
         self._refresh_all_tabs()
 
-        # Update status bar
+        # Update status bar and output mode availability
         self.main_window.set_cable_status(
             self.cable_info.installed,
             self.cable_info.input_device_name
         )
+        self.main_window.set_cable_available(self.cable_info.installed)
 
         # Set initial volume from config
         vol = self.config.get("audio", "master_volume", default=0.8)
@@ -382,6 +383,7 @@ class VyberApp:
         self.main_window.set_cable_status(
             self.cable_info.installed, self.cable_info.input_device_name
         )
+        self.main_window.set_cable_available(self.cable_info.installed)
 
     def _on_install_error(self, error_msg: str):
         """Called when the install process fails."""
