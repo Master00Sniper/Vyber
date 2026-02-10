@@ -2,12 +2,29 @@
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
-# Default config directory
-CONFIG_DIR = Path.home() / ".vyber"
+
+def _get_data_dir() -> Path:
+    """Return the Vyber data directory, platform-appropriate.
+
+    Windows: %APPDATA%\\Vyber   (e.g. C:\\Users\\<user>\\AppData\\Roaming\\Vyber)
+    Other:   ~/.vyber
+    """
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            return Path(appdata) / "Vyber"
+    return Path.home() / ".vyber"
+
+
+# Default config / data directory
+DATA_DIR = _get_data_dir()
+CONFIG_DIR = DATA_DIR
 CONFIG_FILE = CONFIG_DIR / "config.json"
+LOG_FILE = DATA_DIR / "vyber.log"
 
 DEFAULT_CONFIG = {
     "sounds_directory": "",

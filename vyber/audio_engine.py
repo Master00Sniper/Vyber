@@ -1,9 +1,12 @@
 """Audio engine — handles playback, multi-device output, and mic mixing."""
 
+import logging
 import threading
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
+
+logger = logging.getLogger(__name__)
 
 try:
     from pydub import AudioSegment
@@ -154,7 +157,7 @@ class AudioEngine:
                 )
                 self._speaker_stream.start()
         except Exception as e:
-            print(f"Failed to open speaker stream: {e}")
+            logger.error("Failed to open speaker stream: %s", e)
 
         try:
             if self.output_mode in ("mic", "both") and self.virtual_cable_device is not None:
@@ -168,7 +171,7 @@ class AudioEngine:
                 )
                 self._cable_stream.start()
         except Exception as e:
-            print(f"Failed to open virtual cable stream: {e}")
+            logger.error("Failed to open virtual cable stream: %s", e)
 
         try:
             if self.mic_passthrough and self.mic_device is not None and self.virtual_cable_device is not None:
@@ -184,7 +187,7 @@ class AudioEngine:
                 )
                 self._mic_stream.start()
         except Exception as e:
-            print(f"Failed to open mic stream: {e}")
+            logger.error("Failed to open mic stream: %s", e)
 
     def stop(self):
         """Stop all streams."""
@@ -214,7 +217,7 @@ class AudioEngine:
             self._cache[filepath] = clip
             return clip
         except Exception as e:
-            print(f"Failed to load sound '{filepath}': {e}")
+            logger.error("Failed to load sound '%s': %s", filepath, e)
             return None
 
     def play_sound(self, filepath: str, volume: float = 1.0):

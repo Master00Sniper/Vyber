@@ -1,11 +1,14 @@
 """Main application controller — wires together all components."""
 
+import logging
 import os
 import sys
 import threading
 from tkinter import filedialog, simpledialog, messagebox
 
 import customtkinter as ctk
+
+logger = logging.getLogger(__name__)
 
 from vyber.config import Config
 from vyber.audio_engine import AudioEngine
@@ -101,7 +104,7 @@ class VyberApp:
         try:
             self.audio_engine.start()
         except Exception as e:
-            print(f"Audio engine start warning: {e}")
+            logger.warning("Audio engine start warning: %s", e)
 
         self.root.mainloop()
 
