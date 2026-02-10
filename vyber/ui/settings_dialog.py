@@ -18,7 +18,8 @@ class SettingsDialog(ctk.CTkToplevel):
                  mic_passthrough: bool,
                  sound_overlap: str = "overlap",
                  on_save: Callable[[dict], None] | None = None,
-                 on_install_vb_cable: Callable[[], None] | None = None):
+                 on_install_vb_cable: Callable[[], None] | None = None,
+                 icon_path: str | None = None):
         super().__init__(master)
 
         self.title("Vyber Settings")
@@ -26,6 +27,19 @@ class SettingsDialog(ctk.CTkToplevel):
         self.resizable(False, False)
         self.transient(master)
         self.grab_set()
+
+        # Center on parent window
+        self.update_idletasks()
+        pw, ph = master.winfo_width(), master.winfo_height()
+        px, py = master.winfo_x(), master.winfo_y()
+        dw, dh = self.winfo_width(), self.winfo_height()
+        x = px + (pw - dw) // 2
+        y = py + (ph - dh) // 2
+        self.geometry(f"500x580+{x}+{y}")
+
+        # Set Vyber icon
+        if icon_path:
+            self.after(200, lambda: self.iconbitmap(icon_path))
 
         self._on_save = on_save
         self._on_install_vb_cable = on_install_vb_cable

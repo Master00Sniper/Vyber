@@ -55,9 +55,9 @@ class VyberApp:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # Set window icon
-        ico_path = IMAGES_DIR / "vyber.ico"
-        if ico_path.exists():
-            self.root.iconbitmap(str(ico_path))
+        self._ico_path = IMAGES_DIR / "vyber.ico"
+        if self._ico_path.exists():
+            self.root.iconbitmap(str(self._ico_path))
 
         # Create main window with callbacks
         self.main_window = MainWindow(self.root, callbacks={
@@ -168,6 +168,18 @@ class VyberApp:
         self.audio_engine.stop()
         self.config.save()
         self.root.destroy()
+
+    def _setup_dialog(self, dialog: ctk.CTkToplevel):
+        """Center a dialog on the main window and set the Vyber icon."""
+        dialog.update_idletasks()
+        pw, ph = self.root.winfo_width(), self.root.winfo_height()
+        px, py = self.root.winfo_x(), self.root.winfo_y()
+        dw, dh = dialog.winfo_width(), dialog.winfo_height()
+        x = px + (pw - dw) // 2
+        y = py + (ph - dh) // 2
+        dialog.geometry(f"+{x}+{y}")
+        if self._ico_path.exists():
+            dialog.after(200, lambda: dialog.iconbitmap(str(self._ico_path)))
 
     def _configure_audio(self):
         """Configure audio engine devices from config and detected cables."""
@@ -424,14 +436,17 @@ class VyberApp:
 
         dialog = ctk.CTkToplevel(self.root)
         dialog.title(f"Volume — {sound_name}")
-        dialog.geometry("300x130")
+        dialog.geometry("300x160")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
 
+        ctk.CTkLabel(dialog, text=sound_name,
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(12, 2))
+
         label = ctk.CTkLabel(dialog, text=f"{int(current * 100)}%",
                              font=ctk.CTkFont(size=14))
-        label.pack(pady=(12, 0))
+        label.pack(pady=(0, 0))
 
         slider = ctk.CTkSlider(dialog, from_=0, to=1, number_of_steps=100,
                                 width=250)
@@ -450,6 +465,8 @@ class VyberApp:
 
         ctk.CTkButton(dialog, text="OK", width=80,
                        command=on_ok).pack(pady=(0, 10))
+
+        self._setup_dialog(dialog)
 
     def _on_volume_change(self, value: float):
         """Master volume changed."""
@@ -509,6 +526,7 @@ class VyberApp:
                                            default="overlap"),
             on_save=self._apply_settings,
             on_install_vb_cable=self._start_vb_cable_install,
+            icon_path=str(self._ico_path) if self._ico_path.exists() else None,
         )
 
     def _apply_settings(self, settings: dict):
