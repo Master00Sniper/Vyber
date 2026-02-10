@@ -217,8 +217,8 @@ class VyberApp:
         """Periodically update playing count and button states."""
         count = self.audio_engine.get_playing_count()
         self.main_window.set_playing_count(count)
-        playing_fps = self.audio_engine.get_playing_filepaths()
-        self.main_window.update_playing_states(playing_fps)
+        playing_remaining = self.audio_engine.get_playing_remaining()
+        self.main_window.update_playing_states(playing_remaining)
         self.root.after(200, self._update_status)
 
     # --- Callbacks ---

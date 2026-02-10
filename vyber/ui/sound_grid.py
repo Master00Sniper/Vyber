@@ -37,6 +37,7 @@ class SoundButton(ctk.CTkButton):
         )
         self.sound_name = sound_name
         self.filepath = filepath
+        self._hotkey = hotkey
         self._on_play = on_play
         self._on_context_menu = on_context_menu
         self._playing = False
@@ -72,8 +73,8 @@ class SoundButton(ctk.CTkButton):
         if self._on_context_menu:
             self._on_context_menu(self.sound_name, event)
 
-    def set_playing(self, playing: bool):
-        """Start or stop the gold border pulse animation."""
+    def set_playing(self, playing: bool, remaining: float = 0.0):
+        """Start or stop the gold border pulse animation with countdown."""
         if playing and not self._playing:
             self._playing = True
             self._pulse_bright = True
@@ -85,6 +86,14 @@ class SoundButton(ctk.CTkButton):
                 self.after_cancel(self._pulse_id)
                 self._pulse_id = None
             self.configure(border_width=0)
+            # Restore original display text
+            self.configure(text=self._format_display(self.sound_name, self._hotkey))
+
+        if playing and remaining > 0:
+            secs = int(remaining)
+            mins, secs = divmod(secs, 60)
+            countdown = f"{mins}:{secs:02d}" if mins else f"0:{secs:02d}"
+            self.configure(text=f"{self._format_display(self.sound_name)}\n{countdown}")
 
     def _pulse(self):
         """Alternate gold border brightness."""
@@ -97,6 +106,7 @@ class SoundButton(ctk.CTkButton):
 
     def update_display(self, sound_name: str, hotkey: str | None = None):
         self.sound_name = sound_name
+        self._hotkey = hotkey
         self.configure(text=self._format_display(sound_name, hotkey))
 
 
@@ -285,10 +295,11 @@ class SoundGrid(ctk.CTkScrollableFrame):
                 break
         return None
 
-    def update_playing_states(self, playing_filepaths: set[str]):
-        """Update gold pulse on buttons whose sounds are currently playing."""
+    def update_playing_states(self, playing_remaining: dict[str, float]):
+        """Update gold pulse and countdown on buttons whose sounds are playing."""
         for btn in self._buttons.values():
-            btn.set_playing(btn.filepath in playing_filepaths)
+            remaining = playing_remaining.get(btn.filepath, 0.0)
+            btn.set_playing(btn.filepath in playing_remaining, remaining)
 
     def _play(self, sound_name: str):
         if self._on_play:

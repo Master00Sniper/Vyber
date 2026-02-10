@@ -311,6 +311,21 @@ class AudioEngine:
         with self.lock:
             return {p.clip.filepath for p in self.playing if not p.finished}
 
+    def get_playing_remaining(self) -> dict[str, float]:
+        """Get remaining seconds for each playing sound (shortest per filepath)."""
+        rate = self._effective_rate or SAMPLE_RATE
+        result: dict[str, float] = {}
+        with self.lock:
+            for p in self.playing:
+                if p.finished or p.clip.data is None:
+                    continue
+                remaining = (len(p.clip.data) - p.position) / rate
+                fp = p.clip.filepath
+                # If multiple instances, show the shortest remaining
+                if fp not in result or remaining < result[fp]:
+                    result[fp] = remaining
+        return result
+
     def _mix_playing_sounds(self, num_frames: int) -> np.ndarray:
         """Mix all currently playing sounds into a single buffer."""
         mixed = np.zeros((num_frames, CHANNELS), dtype="float32")
