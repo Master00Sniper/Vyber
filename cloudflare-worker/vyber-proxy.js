@@ -81,26 +81,26 @@ async function handleRequest(request) {
 
       // Track daily active users (unique install_ids per day)
       const dauKey = `dau:${today}`;
-      const existingDAU = await TELEMETRY.get(dauKey, { type: 'json' }) || [];
+      const existingDAU = await VYBER_TELEMETRY.get(dauKey, { type: 'json' }) || [];
       if (!existingDAU.includes(install_id)) {
         existingDAU.push(install_id);
-        await TELEMETRY.put(dauKey, JSON.stringify(existingDAU), {
+        await VYBER_TELEMETRY.put(dauKey, JSON.stringify(existingDAU), {
           expirationTtl: 60 * 60 * 24 * 90 // Keep for 90 days
         });
       }
 
       // Track total events per day
       const eventKey = `events:${today}:${event}`;
-      const eventCount = parseInt(await TELEMETRY.get(eventKey) || '0') + 1;
-      await TELEMETRY.put(eventKey, eventCount.toString(), {
+      const eventCount = parseInt(await VYBER_TELEMETRY.get(eventKey) || '0') + 1;
+      await VYBER_TELEMETRY.put(eventKey, eventCount.toString(), {
         expirationTtl: 60 * 60 * 24 * 90
       });
 
       // Track version distribution
       if (version) {
         const versionKey = `version:${today}:${version}`;
-        const versionCount = parseInt(await TELEMETRY.get(versionKey) || '0') + 1;
-        await TELEMETRY.put(versionKey, versionCount.toString(), {
+        const versionCount = parseInt(await VYBER_TELEMETRY.get(versionKey) || '0') + 1;
+        await VYBER_TELEMETRY.put(versionKey, versionCount.toString(), {
           expirationTtl: 60 * 60 * 24 * 90
         });
       }
@@ -124,11 +124,11 @@ async function handleRequest(request) {
     try {
       // Use Pacific time instead of UTC
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-      const dau = await TELEMETRY.get(`dau:${today}`, { type: 'json' }) || [];
-      const starts = await TELEMETRY.get(`events:${today}:app_start`) || '0';
-      const heartbeats = await TELEMETRY.get(`events:${today}:heartbeat`) || '0';
-      const soundsPlayed = await TELEMETRY.get(`events:${today}:sound_played`) || '0';
-      const hotkeysUsed = await TELEMETRY.get(`events:${today}:hotkey_used`) || '0';
+      const dau = await VYBER_TELEMETRY.get(`dau:${today}`, { type: 'json' }) || [];
+      const starts = await VYBER_TELEMETRY.get(`events:${today}:app_start`) || '0';
+      const heartbeats = await VYBER_TELEMETRY.get(`events:${today}:heartbeat`) || '0';
+      const soundsPlayed = await VYBER_TELEMETRY.get(`events:${today}:sound_played`) || '0';
+      const hotkeysUsed = await VYBER_TELEMETRY.get(`events:${today}:hotkey_used`) || '0';
 
       return new Response(JSON.stringify({
         date: today,
