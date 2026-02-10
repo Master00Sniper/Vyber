@@ -1,6 +1,7 @@
 """Sound button grid — displays sounds within a category tab."""
 
 import os
+import textwrap
 import customtkinter as ctk
 from tkinter import Menu
 from typing import Callable
@@ -14,17 +15,19 @@ class SoundButton(ctk.CTkButton):
     _COLOR_GOLD = "#FFD700"
     _COLOR_GOLD_DIM = "#8B7500"
     _COLOR_DRAG_TARGET = "#4A7A2B"
+    _BUTTON_WIDTH = 130
+    _BUTTON_HEIGHT = 70
+    _WRAP_CHARS = 16  # max characters per line before wrapping
 
     def __init__(self, master, sound_name: str, filepath: str = "",
                  hotkey: str | None = None,
                  on_play: Callable | None = None,
                  on_context_menu: Callable | None = None, **kwargs):
-        display = sound_name
-        if hotkey:
-            display += f"\n[{hotkey}]"
+        display = self._format_display(sound_name, hotkey)
 
         super().__init__(
-            master, text=display, width=130, height=70,
+            master, text=display,
+            width=self._BUTTON_WIDTH, height=self._BUTTON_HEIGHT,
             corner_radius=8, fg_color=self._COLOR_NORMAL,
             hover_color=self._COLOR_HOVER,
             border_width=0,
@@ -42,6 +45,14 @@ class SoundButton(ctk.CTkButton):
         self._drag_blocked = False  # set by grid when drag completes
 
         self.bind("<Button-3>", self._show_context_menu)
+
+    @classmethod
+    def _format_display(cls, sound_name: str, hotkey: str | None = None) -> str:
+        """Word-wrap the display name to fit the button width."""
+        wrapped = textwrap.fill(sound_name, width=cls._WRAP_CHARS)
+        if hotkey:
+            wrapped += f"\n[{hotkey}]"
+        return wrapped
 
     def _clicked(self, *_args):
         if self._drag_blocked:
@@ -79,10 +90,7 @@ class SoundButton(ctk.CTkButton):
 
     def update_display(self, sound_name: str, hotkey: str | None = None):
         self.sound_name = sound_name
-        display = sound_name
-        if hotkey:
-            display += f"\n[{hotkey}]"
-        self.configure(text=display)
+        self.configure(text=self._format_display(sound_name, hotkey))
 
 
 class SoundGrid(ctk.CTkScrollableFrame):
@@ -130,9 +138,10 @@ class SoundGrid(ctk.CTkScrollableFrame):
         self._drag_start_y = 0
         self._drag_target_btn: SoundButton | None = None
 
-        # Add sound button (always at the end)
+        # Add sound button (always at the end, same size as sound buttons)
         self._add_button = ctk.CTkButton(
-            self, text="+ Add Sound", width=130, height=70,
+            self, text="+ Add Sound",
+            width=SoundButton._BUTTON_WIDTH, height=SoundButton._BUTTON_HEIGHT,
             corner_radius=8, fg_color="#2B5B2B", hover_color="#3A7A3A",
             font=ctk.CTkFont(size=12),
             command=self._add_sound_clicked

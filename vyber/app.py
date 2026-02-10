@@ -45,10 +45,10 @@ class VyberApp:
         # Build the GUI
         self.root = ctk.CTk()
         self.root.title("Vyber")
-        w = max(1280, self.config.get("window", "width", default=1280))
+        w = max(1050, self.config.get("window", "width", default=1050))
         h = max(650, self.config.get("window", "height", default=650))
         self.root.geometry(f"{w}x{h}")
-        self.root.minsize(1280, 650)
+        self.root.minsize(1050, 650)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 

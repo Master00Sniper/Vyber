@@ -1,6 +1,7 @@
 """Main application window — ties together all UI components."""
 
 import customtkinter as ctk
+from tkinter import Menu
 from typing import Callable
 from PIL import Image
 
@@ -114,6 +115,9 @@ class MainWindow:
         self.tabview = ctk.CTkTabview(self.root)
         self.tabview.pack(fill="both", expand=True, padx=10, pady=5)
 
+        # Right-click on tab headers to delete categories
+        self._bind_tab_context_menu()
+
         # --- Status bar ---
         self.status_bar = StatusBar(self.root)
         self.status_bar.pack(fill="x", padx=10, pady=(0, 5))
@@ -140,6 +144,7 @@ class MainWindow:
         grid.pack(fill="both", expand=True)
         grid.populate(sounds)
         self._tab_grids[name] = grid
+        self._bind_tab_context_menu()
 
     def remove_category_tab(self, name: str):
         """Remove a category tab."""
@@ -163,6 +168,32 @@ class MainWindow:
         # Recreate
         for name, sounds in categories.items():
             self.add_category_tab(name, sounds)
+
+    def _bind_tab_context_menu(self):
+        """Bind right-click on tab headers for category management."""
+        try:
+            seg_button = self.tabview._segmented_button
+            seg_button.bind("<Button-3>", self._tab_context_menu)
+            for child in seg_button.winfo_children():
+                child.bind("<Button-3>", self._tab_context_menu)
+        except AttributeError:
+            pass
+
+    def _tab_context_menu(self, event):
+        """Show right-click menu on the current tab."""
+        current = self.tabview.get()
+        if not current:
+            return
+        menu = Menu(self.root, tearoff=0)
+        menu.configure(
+            bg="#2b2b2b", fg="white", activebackground="#404040",
+            activeforeground="white"
+        )
+        menu.add_command(
+            label=f"Delete \"{current}\"",
+            command=lambda: self.callbacks["on_remove_category"](current)
+        )
+        menu.tk_popup(event.x_root, event.y_root)
 
     def set_cable_status(self, installed: bool, name: str = ""):
         self.status_bar.set_cable_status(installed, name)
