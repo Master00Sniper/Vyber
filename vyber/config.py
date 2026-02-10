@@ -42,6 +42,9 @@ DEFAULT_CONFIG = {
         "master_volume": 0.8,
         "mic_passthrough": True
     },
+    "preferences": {
+        "sound_overlap": "overlap"  # "overlap" or "stop"
+    },
     "window": {
         "width": 900,
         "height": 600

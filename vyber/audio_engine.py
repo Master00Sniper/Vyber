@@ -242,6 +242,12 @@ class AudioEngine:
         with self.lock:
             self.playing.clear()
 
+    def stop_sound(self, filepath: str):
+        """Stop all instances of a specific sound by filepath."""
+        with self.lock:
+            self.playing = [p for p in self.playing
+                            if p.finished or p.clip.filepath != filepath]
+
     def set_output_mode(self, mode: str):
         """Change output mode and restart streams."""
         if mode not in ("speakers", "mic", "both"):

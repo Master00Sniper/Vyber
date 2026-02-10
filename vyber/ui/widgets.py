@@ -115,9 +115,11 @@ class StatusBar(ctk.CTkFrame):
                 text=f"VB-CABLE: Connected", text_color="#4CAF50"
             )
         else:
-            self.cable_status.configure(
-                text="VB-CABLE: Not detected", text_color="#FF5722"
+            msg = name if name else (
+                "VB-CABLE not detected — install VB-CABLE to play "
+                "sound clips through speakers and microphone"
             )
+            self.cable_status.configure(text=msg, text_color="#FF5722")
 
     def set_playing_count(self, count: int):
         color = "#4CAF50" if count > 0 else "gray"

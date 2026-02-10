@@ -224,9 +224,14 @@ class VyberApp:
 
     def _on_play(self, category: str, sound_name: str):
         """Play a sound by name from a category."""
+        overlap = self.config.get("preferences", "sound_overlap",
+                                   default="overlap")
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
-                self.audio_engine.play_sound(sound.path, sound.volume)
+                if overlap == "stop" and sound.path in self.audio_engine.get_playing_filepaths():
+                    self.audio_engine.stop_sound(sound.path)
+                else:
+                    self.audio_engine.play_sound(sound.path, sound.volume)
                 send_telemetry("sound_played")
                 break
 
@@ -369,6 +374,8 @@ class VyberApp:
             current_stop_hotkey=self.config.get("hotkeys", "stop_all",
                                                  default="escape"),
             mic_passthrough=self.audio_engine.mic_passthrough,
+            sound_overlap=self.config.get("preferences", "sound_overlap",
+                                           default="overlap"),
             on_save=self._apply_settings,
             on_install_vb_cable=self._start_vb_cable_install,
         )
@@ -379,6 +386,7 @@ class VyberApp:
         self.config.set("audio", "mic_device", settings["mic_device"])
         self.config.set("audio", "mic_passthrough", settings["mic_passthrough"])
         self.config.set("hotkeys", "stop_all", settings["stop_all_hotkey"])
+        self.config.set("preferences", "sound_overlap", settings["sound_overlap"])
         self.config.save()
 
         # Reconfigure audio
