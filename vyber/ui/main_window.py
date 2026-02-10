@@ -173,10 +173,24 @@ class MainWindow:
         """Bind right-click on tab headers for category management."""
         try:
             seg_button = self.tabview._segmented_button
-            seg_button.bind("<Button-3>", self._tab_context_menu)
-            for child in seg_button.winfo_children():
-                child.bind("<Button-3>", self._tab_context_menu)
-        except AttributeError:
+            # CTkSegmentedButton doesn't support .bind() directly,
+            # so bind on the underlying tk frame and its children
+            tk_frame = seg_button._canvas if hasattr(seg_button, '_canvas') else None
+            targets = list(seg_button.winfo_children())
+            if tk_frame:
+                targets.append(tk_frame)
+            for widget in targets:
+                try:
+                    widget.bind("<Button-3>", self._tab_context_menu)
+                except (NotImplementedError, AttributeError):
+                    pass
+                # Also bind on grandchildren (the actual button labels)
+                for grandchild in widget.winfo_children():
+                    try:
+                        grandchild.bind("<Button-3>", self._tab_context_menu)
+                    except (NotImplementedError, AttributeError):
+                        pass
+        except (AttributeError, NotImplementedError):
             pass
 
     def _tab_context_menu(self, event):
