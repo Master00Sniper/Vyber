@@ -124,6 +124,7 @@ class SoundGrid(ctk.CTkScrollableFrame):
                  on_add: Callable[[str], None] | None = None,
                  on_add_folder: Callable[[str], None] | None = None,
                  on_remove: Callable[[str, str], None] | None = None,
+                 on_delete_file: Callable[[str, str], None] | None = None,
                  on_rename: Callable[[str, str], None] | None = None,
                  on_set_hotkey: Callable[[str, str], None] | None = None,
                  on_move: Callable[[str, str], None] | None = None,
@@ -137,6 +138,7 @@ class SoundGrid(ctk.CTkScrollableFrame):
         self._on_add = on_add
         self._on_add_folder = on_add_folder
         self._on_remove = on_remove
+        self._on_delete_file = on_delete_file
         self._on_rename = on_rename
         self._on_set_hotkey = on_set_hotkey
         self._on_move = on_move
@@ -371,6 +373,11 @@ class SoundGrid(ctk.CTkScrollableFrame):
             label="Remove",
             command=lambda: self._on_remove(self.category, sound_name)
             if self._on_remove else None
+        )
+        menu.add_command(
+            label="Remove & Delete File",
+            command=lambda: self._on_delete_file(self.category, sound_name)
+            if self._on_delete_file else None
         )
 
         menu.tk_popup(event.x_root, event.y_root)

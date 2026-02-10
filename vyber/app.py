@@ -66,6 +66,7 @@ class VyberApp:
             "on_add_sound": self._on_add_sound,
             "on_add_folder": self._on_add_folder,
             "on_remove_sound": self._on_remove_sound,
+            "on_delete_file": self._on_delete_file,
             "on_rename_sound": self._on_rename_sound,
             "on_set_hotkey": self._on_set_hotkey,
             "on_move_sound": self._on_move_sound,
@@ -279,6 +280,38 @@ class VyberApp:
                                f"Remove '{sound_name}' from {category}?",
                                parent=self.root):
             self.sound_manager.remove_sound(category, sound_name)
+            self._refresh_tab(category)
+            self._register_hotkeys()
+
+    def _on_delete_file(self, category: str, sound_name: str):
+        """Remove a sound and delete its file from disk."""
+        # Find the file path before removing
+        filepath = None
+        for sound in self.sound_manager.get_sounds(category):
+            if sound.name == sound_name:
+                filepath = sound.path
+                break
+        if not filepath:
+            return
+
+        if messagebox.askyesno(
+            "Delete Sound File",
+            f"Remove '{sound_name}' and permanently delete the file?\n\n"
+            f"{filepath}\n\n"
+            f"This cannot be undone.",
+            parent=self.root
+        ):
+            self.sound_manager.remove_sound(category, sound_name)
+            self.audio_engine.stop_sound(filepath)
+            self.audio_engine.invalidate_cache(filepath)
+            try:
+                os.remove(filepath)
+                logger.info("Deleted file: %s", filepath)
+            except OSError as e:
+                logger.error("Failed to delete file '%s': %s", filepath, e)
+                messagebox.showerror("Delete Failed",
+                                     f"Could not delete file:\n{e}",
+                                     parent=self.root)
             self._refresh_tab(category)
             self._register_hotkeys()
 

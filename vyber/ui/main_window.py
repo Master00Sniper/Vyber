@@ -121,6 +121,7 @@ class MainWindow:
             on_add=self.callbacks.get("on_add_sound"),
             on_add_folder=self.callbacks.get("on_add_folder"),
             on_remove=self.callbacks.get("on_remove_sound"),
+            on_delete_file=self.callbacks.get("on_delete_file"),
             on_rename=self.callbacks.get("on_rename_sound"),
             on_set_hotkey=self.callbacks.get("on_set_hotkey"),
             on_move=self.callbacks.get("on_move_sound"),
