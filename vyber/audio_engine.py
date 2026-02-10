@@ -138,6 +138,10 @@ class AudioEngine:
         self._mic_buffer = np.zeros((BLOCK_SIZE, CHANNELS), dtype="float32")
         self._mic_lock = threading.Lock()
 
+        # Cached mix for "both" mode — speaker callback writes, cable reads
+        self._cached_mix = np.zeros((BLOCK_SIZE, CHANNELS), dtype="float32")
+        self._cached_mix_lock = threading.Lock()
+
         # Sound cache: filepath -> SoundClip
         self._cache: dict[str, SoundClip] = {}
 
@@ -287,12 +291,22 @@ class AudioEngine:
     def _speaker_callback(self, outdata: np.ndarray, frames: int,
                           time_info, status):
         """Callback for speaker output stream."""
-        outdata[:] = self._mix_playing_sounds(frames)
+        mixed = self._mix_playing_sounds(frames)
+        outdata[:] = mixed
+        # Cache for cable callback in "both" mode
+        if self.output_mode == "both":
+            with self._cached_mix_lock:
+                self._cached_mix = mixed.copy()
 
     def _cable_callback(self, outdata: np.ndarray, frames: int,
                         time_info, status):
         """Callback for virtual cable output — mixes Vyber audio + mic."""
-        mixed = self._mix_playing_sounds(frames)
+        if self.output_mode == "both":
+            # Reuse the mix from speaker callback to avoid double-advancing
+            with self._cached_mix_lock:
+                mixed = self._cached_mix[:frames].copy()
+        else:
+            mixed = self._mix_playing_sounds(frames)
 
         # Mix in microphone passthrough
         if self.mic_passthrough:
