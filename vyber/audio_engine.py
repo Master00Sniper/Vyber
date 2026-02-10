@@ -143,9 +143,11 @@ class AudioEngine:
         self._mic_write_pos = 0  # only written by mic callback
         self._mic_read_pos = 0   # only written by cable callback
 
-        # Cached mix for "both" mode — speaker callback writes, cable reads
-        self._cached_mix = np.zeros((BLOCK_SIZE, CHANNELS), dtype="float32")
-        self._cached_mix_lock = threading.Lock()
+        # Mix ring buffer for "both" mode — speaker writes, cable reads
+        self._mix_ring_size = BLOCK_SIZE * 8
+        self._mix_ring = np.zeros((self._mix_ring_size, CHANNELS), dtype="float32")
+        self._mix_write_pos = 0  # only written by speaker callback
+        self._mix_read_pos = 0   # only written by cable callback
 
         # Sound cache: filepath -> SoundClip
         self._cache: dict[str, SoundClip] = {}
@@ -346,18 +348,45 @@ class AudioEngine:
         """Callback for speaker output stream."""
         mixed = self._mix_playing_sounds(frames)
         outdata[:] = mixed
-        # Cache for cable callback in "both" mode
+        # Write to ring buffer for cable callback in "both" mode
         if self.output_mode == "both":
-            with self._cached_mix_lock:
-                self._cached_mix = mixed.copy()
+            n = frames
+            wp = self._mix_write_pos
+            ring = self._mix_ring_size
+            end = wp + n
+            if end <= ring:
+                self._mix_ring[wp:end] = mixed[:n]
+            else:
+                first = ring - wp
+                self._mix_ring[wp:] = mixed[:first]
+                self._mix_ring[:n - first] = mixed[first:n]
+            self._mix_write_pos = (wp + n) % ring
 
     def _cable_callback(self, outdata: np.ndarray, frames: int,
                         time_info, status):
         """Callback for virtual cable output — mixes Vyber audio + mic."""
         if self.output_mode == "both":
-            # Reuse the mix from speaker callback to avoid double-advancing
-            with self._cached_mix_lock:
-                mixed = self._cached_mix[:frames].copy()
+            # Read mix from ring buffer to avoid double-advancing
+            rp = self._mix_read_pos
+            wp = self._mix_write_pos
+            ring = self._mix_ring_size
+            available = (wp - rp) % ring
+
+            if available > ring // 2:
+                rp = (wp - frames) % ring
+                available = frames
+
+            n = min(frames, available)
+            mixed = np.zeros((frames, CHANNELS), dtype="float32")
+            if n > 0:
+                end = rp + n
+                if end <= ring:
+                    mixed[:n] = self._mix_ring[rp:end]
+                else:
+                    first = ring - rp
+                    mixed[:first] = self._mix_ring[rp:]
+                    mixed[first:n] = self._mix_ring[:n - first]
+                self._mix_read_pos = (rp + n) % ring
         else:
             mixed = self._mix_playing_sounds(frames)
 
