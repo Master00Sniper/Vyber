@@ -20,6 +20,7 @@ from vyber.ui.main_window import MainWindow
 from vyber.ui.settings_dialog import SettingsDialog
 from vyber import vb_cable_installer
 from vyber.tray_manager import TrayManager
+import updater
 
 
 class VyberApp:
@@ -116,6 +117,15 @@ class VyberApp:
         # Start periodic status update
         self._update_status()
 
+        # Background auto-updater
+        self._update_stop = threading.Event()
+        self._update_thread = threading.Thread(
+            target=updater.periodic_update_check,
+            args=(self._update_stop, None),
+            daemon=True,
+        )
+        self._update_thread.start()
+
     def run(self):
         """Start the application main loop."""
         try:
@@ -144,6 +154,7 @@ class VyberApp:
 
     def _full_shutdown(self):
         """Clean shutdown — stop everything and exit."""
+        self._update_stop.set()
         self.tray.stop()
         self.hotkey_manager.stop()
         self.audio_engine.stop()
