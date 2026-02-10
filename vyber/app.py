@@ -3,12 +3,15 @@
 import ctypes
 import logging
 import os
+import platform
 import sys
 import threading
+import time
 import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
 
 import customtkinter as ctk
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +103,8 @@ class VyberApp:
             "on_open_settings": self._on_open_settings,
             "on_discord_guide": self._on_discord_guide,
             "on_refresh_audio": self._on_refresh_audio,
+            "on_help": self._on_help,
+            "on_about": self._on_about,
             "get_categories": self.sound_manager.get_categories,
         })
 
@@ -703,6 +708,319 @@ class VyberApp:
 
         # --- Close button ---
         ctk.CTkButton(outer, text="Got It", width=100,
+                       command=dialog.destroy).pack(pady=(8, 12))
+
+        self._setup_dialog(dialog)
+
+    def _on_help(self):
+        """Show the Help / Report a Bug dialog."""
+        from vyber import __version__
+        from vyber.telemetry import AUTH_KEY
+
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Help — Report a Bug")
+        dialog.geometry("540x620")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
+
+        heading = ctk.CTkFont(size=16, weight="bold")
+        bold = ctk.CTkFont(size=14, weight="bold")
+        body = ctk.CTkFont(size=13)
+
+        # --- Title ---
+        ctk.CTkLabel(scroll, text="Help & Bug Reports",
+                     font=heading).pack(anchor="center", pady=(5, 2))
+        ctk.CTkLabel(
+            scroll, font=body, text_color="gray60",
+            text="Get help with Vyber or submit a bug report to GitHub Issues.",
+        ).pack(anchor="center", pady=(0, 10))
+
+        # --- How Vyber Works ---
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=8)
+        ctk.CTkLabel(scroll, text="How Vyber Works",
+                     font=bold).pack(anchor="center", pady=(8, 4))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=480, justify="left",
+            text="Vyber is a soundboard that plays audio through your speakers "
+                 "and into voice chat at the same time. It uses VB-CABLE to "
+                 "route audio into a virtual microphone that Discord (or any "
+                 "voice app) picks up as your input device.\n\n"
+                 "  \u2022  Add sounds, organize them into categories\n"
+                 "  \u2022  Set global hotkeys to trigger sounds from any app\n"
+                 "  \u2022  Mic Passthrough mixes your real voice in so friends "
+                 "hear both you and your sounds",
+        ).pack(anchor="w", padx=20, pady=(0, 4))
+
+        # --- Troubleshooting ---
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=8)
+        ctk.CTkLabel(scroll, text="Troubleshooting",
+                     font=bold).pack(anchor="center", pady=(8, 4))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=480, justify="left",
+            text="If Vyber isn't working as expected:\n\n"
+                 "  \u2022  Make sure VB-CABLE is installed (restart PC after install)\n"
+                 "  \u2022  Set Discord's Input Device to \"CABLE Output\"\n"
+                 "  \u2022  Disable Discord's voice processing (see Discord Setup)\n"
+                 "  \u2022  Click \"Refresh Audio Devices\" in the menu if you changed\n"
+                 "     audio devices after launching Vyber\n"
+                 "  \u2022  Try setting the output mode to \"Both\"",
+        ).pack(anchor="w", padx=20, pady=(0, 4))
+
+        # --- Bug Report ---
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=8)
+        ctk.CTkLabel(scroll, text="Report a Bug",
+                     font=bold).pack(anchor="center", pady=(8, 2))
+        ctk.CTkLabel(
+            scroll, font=body, text_color="gray60",
+            text="Your report will be submitted to GitHub Issues.",
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkLabel(scroll, text="Title (brief summary)",
+                     font=body).pack(anchor="center", pady=(2, 2))
+        title_entry = ctk.CTkEntry(scroll, width=400, height=32,
+                                   placeholder_text="e.g., Sound doesn't play through Discord")
+        title_entry.pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkLabel(scroll, text="Description (steps to reproduce)",
+                     font=body).pack(anchor="center", pady=(2, 2))
+        desc_textbox = ctk.CTkTextbox(scroll, width=400, height=100, wrap="word")
+        desc_textbox.pack(anchor="center", pady=(0, 8))
+
+        include_system_var = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            scroll, text="Include system info (OS, Vyber version)",
+            variable=include_system_var, font=body,
+        ).pack(anchor="center", pady=(2, 8))
+
+        status_label = ctk.CTkLabel(scroll, text="", font=body)
+        status_label.pack(anchor="center", pady=(0, 4))
+
+        submit_time = [0.0]
+
+        def _get_system_info():
+            lines = [
+                f"- **Vyber Version**: {__version__}",
+                f"- **OS**: {platform.system()} {platform.release()} "
+                f"({platform.version()})",
+                f"- **Python**: {platform.python_version()}",
+                f"- **Architecture**: {platform.machine()}",
+            ]
+            return "\n".join(lines)
+
+        def _submit():
+            submit_btn.configure(state="disabled", fg_color="gray50")
+            submit_time[0] = time.time()
+
+            def _re_enable():
+                elapsed = time.time() - submit_time[0]
+                remaining = max(0, 5.0 - elapsed)
+                self.root.after(int(remaining * 1000),
+                                lambda: submit_btn.configure(
+                                    state="normal", fg_color="#2563eb"))
+
+            title = title_entry.get().strip()
+            desc = desc_textbox.get("1.0", "end-1c").strip()
+            if not title:
+                status_label.configure(
+                    text="Please enter a title.", text_color="#ff6b6b")
+                _re_enable()
+                return
+            if not desc:
+                status_label.configure(
+                    text="Please describe the bug.", text_color="#ff6b6b")
+                _re_enable()
+                return
+
+            body_parts = ["## Description", desc]
+            if include_system_var.get():
+                body_parts.append("\n## System Information")
+                body_parts.append(_get_system_info())
+            body_parts.append("\n---")
+            body_parts.append("*Submitted via Vyber*")
+            issue_body = "\n".join(body_parts)
+
+            status_label.configure(text="Submitting...",
+                                   text_color="gray60")
+            self.root.update()
+
+            def _do_submit():
+                try:
+                    resp = requests.post(
+                        "https://vyber-proxy.mortonapps.com/repos/Master00Sniper/Vyber/issues",
+                        headers={
+                            "Accept": "application/vnd.github.v3+json",
+                            "User-Agent": f"Vyber/{__version__}",
+                            "X-Vyber-Auth": AUTH_KEY,
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "title": f"[Bug Report] {title}",
+                            "body": issue_body,
+                        },
+                        timeout=15,
+                    )
+                    if resp.status_code == 201:
+                        num = resp.json().get("number", "?")
+                        self.root.after(0, lambda: status_label.configure(
+                            text=f"Submitted! (Issue #{num})",
+                            text_color="#4ade80"))
+                        self.root.after(0, lambda: title_entry.delete(0, "end"))
+                        self.root.after(0, lambda: desc_textbox.delete(
+                            "1.0", "end"))
+                    else:
+                        self.root.after(0, lambda: status_label.configure(
+                            text=f"Failed (HTTP {resp.status_code})",
+                            text_color="#ff6b6b"))
+                except requests.exceptions.Timeout:
+                    self.root.after(0, lambda: status_label.configure(
+                        text="Request timed out.", text_color="#ff6b6b"))
+                except Exception:
+                    self.root.after(0, lambda: status_label.configure(
+                        text="Network error.", text_color="#ff6b6b"))
+                self.root.after(0, _re_enable)
+
+            threading.Thread(target=_do_submit, daemon=True).start()
+
+        submit_btn = ctk.CTkButton(
+            scroll, text="Submit Bug Report", width=180,
+            fg_color="#2563eb", hover_color="#1d4ed8", command=_submit)
+        submit_btn.pack(anchor="center", pady=(4, 20))
+
+        # --- Close ---
+        ctk.CTkButton(outer, text="Close", width=100,
+                       command=dialog.destroy).pack(pady=(8, 12))
+
+        self._setup_dialog(dialog)
+
+    def _on_about(self):
+        """Show the About Vyber dialog."""
+        from vyber import __version__
+
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("About Vyber")
+        dialog.geometry("480x540")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
+
+        heading = ctk.CTkFont(size=20, weight="bold")
+        bold = ctk.CTkFont(size=14, weight="bold")
+        body = ctk.CTkFont(size=13)
+
+        # --- Title & version ---
+        ctk.CTkLabel(scroll, text="Vyber",
+                     font=heading).pack(anchor="center", pady=(10, 2))
+        ctk.CTkLabel(scroll, text=f"Version {__version__}",
+                     font=body).pack(anchor="center", pady=(0, 10))
+
+        # --- Description ---
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=420, justify="center",
+            text="Vyber is a free, open-source soundboard for Windows that "
+                 "plays audio through your speakers and into voice chat at the "
+                 "same time. Built for Discord, gaming, and streaming — no "
+                 "complicated audio routing required.",
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Developer ---
+        ctk.CTkLabel(scroll, text="Developed by",
+                     font=body).pack(anchor="center", pady=(4, 0))
+        ctk.CTkLabel(scroll, text="Greg Morton (@Master00Sniper)",
+                     font=ctk.CTkFont(size=15, weight="bold")).pack(
+                         anchor="center", pady=(0, 8))
+
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=420, justify="center",
+            text="I'm a passionate gamer, Sr. Systems Administrator, wine "
+                 "enthusiast, and proud small winery owner. Vyber was born from "
+                 "wanting a dead-simple soundboard that actually works in voice "
+                 "chat. I hope it makes your sessions more fun!",
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Support ---
+        ctk.CTkLabel(scroll, text="Support Development",
+                     font=bold).pack(anchor="center", pady=(4, 4))
+        ctk.CTkLabel(
+            scroll, font=body, justify="center",
+            text="If Vyber has made your voice chats better,\nconsider "
+                 "supporting development!",
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkButton(
+            scroll, text="Support on Ko-fi", width=200,
+            fg_color="#2563eb", hover_color="#1d4ed8",
+            command=lambda: os.startfile("https://ko-fi.com/master00sniper"),
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Contact ---
+        ctk.CTkLabel(scroll, text="Contact & Connect",
+                     font=bold).pack(anchor="center", pady=(4, 4))
+        ctk.CTkLabel(scroll, text="Email: greg@mortonapps.com",
+                     font=body).pack(anchor="center", pady=2)
+
+        x_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+        x_frame.pack(anchor="center", pady=2)
+        ctk.CTkLabel(x_frame, text="X: ", font=body).pack(side="left")
+        x_link = ctk.CTkLabel(
+            x_frame, text="x.com/master00sniper",
+            font=ctk.CTkFont(size=13, underline=True),
+            text_color="#1DA1F2", cursor="hand2")
+        x_link.pack(side="left")
+        x_link.bind("<Button-1>",
+                     lambda e: os.startfile("https://x.com/master00sniper"))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Copyright ---
+        ctk.CTkLabel(
+            scroll, font=ctk.CTkFont(size=11),
+            text="\u00a9 2025-2026 Greg Morton (@Master00Sniper)",
+        ).pack(anchor="center", pady=(4, 2))
+        ctk.CTkLabel(
+            scroll, font=ctk.CTkFont(size=11), text_color="gray50",
+            text="Licensed under the GNU General Public License v3.0",
+        ).pack(anchor="center", pady=(0, 4))
+        ctk.CTkLabel(
+            scroll, font=ctk.CTkFont(size=10), text_color="gray50",
+            wraplength=420, justify="center",
+            text="This program is distributed in the hope that it will be "
+                 "useful, but WITHOUT ANY WARRANTY; without even the implied "
+                 "warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR "
+                 "PURPOSE. See the GPL v3 license for details.",
+        ).pack(anchor="center", pady=(0, 16))
+
+        # --- Close ---
+        ctk.CTkButton(outer, text="Close", width=100,
                        command=dialog.destroy).pack(pady=(8, 12))
 
         self._setup_dialog(dialog)

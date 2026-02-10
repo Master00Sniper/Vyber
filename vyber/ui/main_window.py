@@ -74,41 +74,17 @@ class MainWindow:
         )
         self.stop_button.pack(side="left", padx=10)
 
-        # Settings button
-        self.settings_button = ctk.CTkButton(
+        # Dropdown menu button (far right)
+        self.menu_button = ctk.CTkButton(
             self.top_frame,
-            text="Settings",
+            text="\u2630 Menu",
             width=80,
             height=32,
             fg_color="#37474F",
             hover_color="#546E7A",
-            command=self.callbacks.get("on_open_settings")
+            command=self._show_menu
         )
-        self.settings_button.pack(side="right", padx=5)
-
-        # Discord Setup guide button
-        self.discord_button = ctk.CTkButton(
-            self.top_frame,
-            text="Discord Setup",
-            width=110,
-            height=32,
-            fg_color="#5865F2",
-            hover_color="#4752C4",
-            command=self.callbacks.get("on_discord_guide")
-        )
-        self.discord_button.pack(side="right", padx=5)
-
-        # Refresh audio devices button
-        self.refresh_button = ctk.CTkButton(
-            self.top_frame,
-            text="Refresh Audio",
-            width=105,
-            height=32,
-            fg_color="#37474F",
-            hover_color="#546E7A",
-            command=self.callbacks.get("on_refresh_audio")
-        )
-        self.refresh_button.pack(side="right", padx=5)
+        self.menu_button.pack(side="right", padx=5)
 
         # Add category button
         self.add_cat_button = ctk.CTkButton(
@@ -181,6 +157,30 @@ class MainWindow:
         # Recreate
         for name, sounds in categories.items():
             self.add_category_tab(name, sounds)
+
+    def _show_menu(self):
+        """Show the dropdown menu anchored below the menu button."""
+        menu = Menu(self.root, tearoff=0)
+        menu.configure(
+            bg="#2b2b2b", fg="white", activebackground="#404040",
+            activeforeground="white", font=("Segoe UI", 10),
+        )
+        menu.add_command(label="Settings",
+                         command=self.callbacks.get("on_open_settings"))
+        menu.add_command(label="Discord Setup",
+                         command=self.callbacks.get("on_discord_guide"))
+        menu.add_command(label="Refresh Audio Devices",
+                         command=self.callbacks.get("on_refresh_audio"))
+        menu.add_separator()
+        menu.add_command(label="Help / Report a Bug",
+                         command=self.callbacks.get("on_help"))
+        menu.add_command(label="About Vyber",
+                         command=self.callbacks.get("on_about"))
+
+        # Position below the menu button
+        x = self.menu_button.winfo_rootx()
+        y = self.menu_button.winfo_rooty() + self.menu_button.winfo_height()
+        menu.tk_popup(x, y)
 
     def _bind_tab_context_menu(self):
         """Bind right-click on tab headers for category management."""
