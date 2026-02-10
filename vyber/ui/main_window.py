@@ -178,5 +178,10 @@ class MainWindow:
         """Enable or disable mic-dependent output modes."""
         self.output_mode.set_cable_available(available)
 
+    def update_playing_states(self, playing_filepaths: set[str]):
+        """Update gold pulse on all sound buttons across all tabs."""
+        for grid in self._tab_grids.values():
+            grid.update_playing_states(playing_filepaths)
+
     def set_volume(self, volume: float):
         self.volume_slider.set(volume)

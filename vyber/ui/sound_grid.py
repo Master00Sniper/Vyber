@@ -7,9 +7,15 @@ from typing import Callable
 
 
 class SoundButton(ctk.CTkButton):
-    """Flat sound button."""
+    """Flat sound button with playing-state gold pulse."""
 
-    def __init__(self, master, sound_name: str, hotkey: str | None = None,
+    _COLOR_NORMAL = "#2B4C7E"
+    _COLOR_HOVER = "#3A6BA5"
+    _COLOR_GOLD = "#FFD700"
+    _COLOR_GOLD_DIM = "#8B7500"
+
+    def __init__(self, master, sound_name: str, filepath: str = "",
+                 hotkey: str | None = None,
                  on_play: Callable | None = None,
                  on_context_menu: Callable | None = None, **kwargs):
         display = sound_name
@@ -18,24 +24,53 @@ class SoundButton(ctk.CTkButton):
 
         super().__init__(
             master, text=display, width=130, height=70,
-            corner_radius=8, fg_color="#3B3B5C", hover_color="#4A4A70",
+            corner_radius=8, fg_color=self._COLOR_NORMAL,
+            hover_color=self._COLOR_HOVER,
+            border_width=0,
             font=ctk.CTkFont(size=12),
-            command=lambda *_args: self._clicked(),
+            command=self._clicked,
             **kwargs,
         )
         self.sound_name = sound_name
+        self.filepath = filepath
         self._on_play = on_play
         self._on_context_menu = on_context_menu
+        self._playing = False
+        self._pulse_bright = True
+        self._pulse_id = None
 
         self.bind("<Button-3>", self._show_context_menu)
 
-    def _clicked(self):
+    def _clicked(self, *_args):
         if self._on_play:
             self._on_play(self.sound_name)
 
     def _show_context_menu(self, event):
         if self._on_context_menu:
             self._on_context_menu(self.sound_name, event)
+
+    def set_playing(self, playing: bool):
+        """Start or stop the gold border pulse animation."""
+        if playing and not self._playing:
+            self._playing = True
+            self._pulse_bright = True
+            self.configure(border_width=2)
+            self._pulse()
+        elif not playing and self._playing:
+            self._playing = False
+            if self._pulse_id is not None:
+                self.after_cancel(self._pulse_id)
+                self._pulse_id = None
+            self.configure(border_width=0)
+
+    def _pulse(self):
+        """Alternate gold border brightness."""
+        if not self._playing:
+            return
+        color = self._COLOR_GOLD if self._pulse_bright else self._COLOR_GOLD_DIM
+        self.configure(border_color=color)
+        self._pulse_bright = not self._pulse_bright
+        self._pulse_id = self.after(400, self._pulse)
 
     def update_display(self, sound_name: str, hotkey: str | None = None):
         self.sound_name = sound_name
@@ -91,6 +126,7 @@ class SoundGrid(ctk.CTkScrollableFrame):
             btn = SoundButton(
                 self,
                 sound_name=sound.name,
+                filepath=sound.path,
                 hotkey=sound.hotkey,
                 on_play=lambda name: self._play(name),
                 on_context_menu=self._context_menu
@@ -103,6 +139,11 @@ class SoundGrid(ctk.CTkScrollableFrame):
         add_idx = len(sounds)
         row, col = divmod(add_idx, self.COLUMNS)
         self._add_button.grid(row=row, column=col, padx=5, pady=5)
+
+    def update_playing_states(self, playing_filepaths: set[str]):
+        """Update gold pulse on buttons whose sounds are currently playing."""
+        for btn in self._buttons.values():
+            btn.set_playing(btn.filepath in playing_filepaths)
 
     def _play(self, sound_name: str):
         if self._on_play:

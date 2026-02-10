@@ -213,9 +213,11 @@ class VyberApp:
         self.main_window.refresh_category(category, sounds)
 
     def _update_status(self):
-        """Periodically update playing count in the status bar."""
+        """Periodically update playing count and button states."""
         count = self.audio_engine.get_playing_count()
         self.main_window.set_playing_count(count)
+        playing_fps = self.audio_engine.get_playing_filepaths()
+        self.main_window.update_playing_states(playing_fps)
         self.root.after(200, self._update_status)
 
     # --- Callbacks ---

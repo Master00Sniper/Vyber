@@ -258,6 +258,11 @@ class AudioEngine:
         with self.lock:
             return len([p for p in self.playing if not p.finished])
 
+    def get_playing_filepaths(self) -> set[str]:
+        """Get the set of filepaths currently playing."""
+        with self.lock:
+            return {p.clip.filepath for p in self.playing if not p.finished}
+
     def _mix_playing_sounds(self, num_frames: int) -> np.ndarray:
         """Mix all currently playing sounds into a single buffer."""
         mixed = np.zeros((num_frames, CHANNELS), dtype="float32")
