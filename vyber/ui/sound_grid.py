@@ -126,6 +126,7 @@ class SoundGrid(ctk.CTkScrollableFrame):
                  on_remove: Callable[[str, str], None] | None = None,
                  on_delete_file: Callable[[str, str], None] | None = None,
                  on_rename: Callable[[str, str], None] | None = None,
+                 on_rename_file: Callable[[str, str], None] | None = None,
                  on_set_hotkey: Callable[[str, str], None] | None = None,
                  on_move: Callable[[str, str], None] | None = None,
                  on_volume: Callable[[str, str], None] | None = None,
@@ -140,6 +141,7 @@ class SoundGrid(ctk.CTkScrollableFrame):
         self._on_remove = on_remove
         self._on_delete_file = on_delete_file
         self._on_rename = on_rename
+        self._on_rename_file = on_rename_file
         self._on_set_hotkey = on_set_hotkey
         self._on_move = on_move
         self._on_volume = on_volume
@@ -344,6 +346,11 @@ class SoundGrid(ctk.CTkScrollableFrame):
             label="Rename",
             command=lambda: self._on_rename(self.category, sound_name)
             if self._on_rename else None
+        )
+        menu.add_command(
+            label="Rename & Rename File",
+            command=lambda: self._on_rename_file(self.category, sound_name)
+            if self._on_rename_file else None
         )
         menu.add_command(
             label="Adjust Volume",

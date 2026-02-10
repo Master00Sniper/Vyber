@@ -68,6 +68,7 @@ class VyberApp:
             "on_remove_sound": self._on_remove_sound,
             "on_delete_file": self._on_delete_file,
             "on_rename_sound": self._on_rename_sound,
+            "on_rename_file": self._on_rename_file,
             "on_set_hotkey": self._on_set_hotkey,
             "on_move_sound": self._on_move_sound,
             "on_volume_sound": self._on_volume_sound,
@@ -76,6 +77,7 @@ class VyberApp:
             "on_output_mode_change": self._on_output_mode_change,
             "on_add_category": self._on_add_category,
             "on_remove_category": self._on_remove_category,
+            "on_clear_category": self._on_clear_category,
             "on_open_settings": self._on_open_settings,
             "get_categories": self.sound_manager.get_categories,
         })
@@ -326,6 +328,53 @@ class VyberApp:
                                             new_name.strip())
             self._refresh_tab(category)
 
+    def _on_rename_file(self, category: str, sound_name: str):
+        """Rename a sound and its underlying file on disk."""
+        # Find the current file path and extension
+        filepath = None
+        for sound in self.sound_manager.get_sounds(category):
+            if sound.name == sound_name:
+                filepath = sound.path
+                break
+        if not filepath:
+            return
+
+        new_name = simpledialog.askstring(
+            "Rename Sound & File", f"New name for '{sound_name}':",
+            parent=self.root
+        )
+        if not new_name or not new_name.strip():
+            return
+        new_name = new_name.strip()
+
+        # Build new file path: same directory and extension, new name
+        directory = os.path.dirname(filepath)
+        ext = os.path.splitext(filepath)[1]
+        new_filepath = os.path.join(directory, new_name + ext)
+
+        if os.path.exists(new_filepath) and new_filepath != filepath:
+            messagebox.showerror("Rename Failed",
+                                 f"A file named '{new_name}{ext}' already exists.",
+                                 parent=self.root)
+            return
+
+        try:
+            os.rename(filepath, new_filepath)
+            logger.info("Renamed file: %s -> %s", filepath, new_filepath)
+        except OSError as e:
+            logger.error("Failed to rename file '%s': %s", filepath, e)
+            messagebox.showerror("Rename Failed",
+                                 f"Could not rename file:\n{e}",
+                                 parent=self.root)
+            return
+
+        # Update the sound entry and caches
+        self.audio_engine.stop_sound(filepath)
+        self.audio_engine.invalidate_cache(filepath)
+        self.sound_manager.rename_sound(category, sound_name, new_name)
+        self.sound_manager.update_sound_path(category, new_name, new_filepath)
+        self._refresh_tab(category)
+
     def _on_set_hotkey(self, category: str, sound_name: str):
         """Set a hotkey for a sound via input dialog."""
         current = None
@@ -409,6 +458,19 @@ class VyberApp:
                                parent=self.root):
             if self.sound_manager.remove_category(name):
                 self._refresh_all_tabs()
+
+    def _on_clear_category(self, name: str):
+        """Remove all sounds from a category without deleting the category."""
+        sounds = self.sound_manager.get_sounds(name)
+        if not sounds:
+            return
+        if messagebox.askyesno("Clear Category",
+                               f"Remove all {len(sounds)} sounds from '{name}'?",
+                               parent=self.root):
+            for sound in list(sounds):
+                self.sound_manager.remove_sound(name, sound.name)
+            self._refresh_tab(name)
+            self._register_hotkeys()
 
     def _on_open_settings(self):
         """Open the settings dialog."""

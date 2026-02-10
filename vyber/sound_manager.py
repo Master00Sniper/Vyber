@@ -147,6 +147,16 @@ class SoundManager:
                 return True
         return False
 
+    def update_sound_path(self, category: str, sound_name: str,
+                          new_path: str) -> bool:
+        """Update the file path of a sound entry."""
+        for sound in self.categories.get(category, []):
+            if sound.name == sound_name:
+                sound.path = new_path
+                self.save_to_config()
+                return True
+        return False
+
     def move_sound(self, from_category: str, to_category: str,
                    sound_name: str) -> bool:
         """Move a sound from one category to another."""
