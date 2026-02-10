@@ -826,9 +826,15 @@ class VyberApp:
             def _re_enable():
                 elapsed = time.time() - submit_time[0]
                 remaining = max(0, 5.0 - elapsed)
-                self.root.after(int(remaining * 1000),
-                                lambda: submit_btn.configure(
-                                    state="normal", fg_color="#2563eb"))
+
+                def _do_enable():
+                    try:
+                        submit_btn.configure(state="normal",
+                                             fg_color="#2563eb")
+                    except Exception:
+                        pass  # dialog already closed
+
+                self.root.after(int(remaining * 1000), _do_enable)
 
             title = title_entry.get().strip()
             desc = desc_textbox.get("1.0", "end-1c").strip()
@@ -855,6 +861,12 @@ class VyberApp:
                                    text_color="gray60")
             self.root.update()
 
+            def _safe_configure(widget, **kwargs):
+                try:
+                    widget.configure(**kwargs)
+                except Exception:
+                    pass  # dialog already closed
+
             def _do_submit():
                 try:
                     resp = requests.post(
@@ -873,24 +885,29 @@ class VyberApp:
                     )
                     if resp.status_code == 201:
                         num = resp.json().get("number", "?")
-                        self.root.after(0, lambda: status_label.configure(
+                        self.root.after(0, lambda: _safe_configure(
+                            status_label,
                             text=f"Submitted! (Issue #{num})",
                             text_color="#4ade80"))
-                        self.root.after(0, lambda: title_entry.delete(0, "end"))
-                        self.root.after(0, lambda: desc_textbox.delete(
-                            "1.0", "end"))
+                        self.root.after(0, lambda: (
+                            title_entry.delete(0, "end"),
+                            desc_textbox.delete("1.0", "end"),
+                        ))
                     else:
                         detail = resp.text[:200]
                         logger.error("Bug report failed: HTTP %d — %s",
                                      resp.status_code, detail)
-                        self.root.after(0, lambda: status_label.configure(
+                        self.root.after(0, lambda: _safe_configure(
+                            status_label,
                             text=f"Failed (HTTP {resp.status_code}): {detail}",
                             text_color="#ff6b6b"))
                 except requests.exceptions.Timeout:
-                    self.root.after(0, lambda: status_label.configure(
+                    self.root.after(0, lambda: _safe_configure(
+                        status_label,
                         text="Request timed out.", text_color="#ff6b6b"))
                 except Exception:
-                    self.root.after(0, lambda: status_label.configure(
+                    self.root.after(0, lambda: _safe_configure(
+                        status_label,
                         text="Network error.", text_color="#ff6b6b"))
                 self.root.after(0, _re_enable)
 
