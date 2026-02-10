@@ -48,11 +48,18 @@ class SoundButton(ctk.CTkButton):
 
     @classmethod
     def _format_display(cls, sound_name: str, hotkey: str | None = None) -> str:
-        """Word-wrap the display name to fit the button width."""
+        """Word-wrap the display name, truncating to 2 lines max."""
+        max_lines = 2
         wrapped = textwrap.fill(sound_name, width=cls._WRAP_CHARS)
+        lines = wrapped.split("\n")
+        if len(lines) > max_lines:
+            lines = lines[:max_lines]
+            # Truncate last visible line with ellipsis
+            lines[-1] = lines[-1][:cls._WRAP_CHARS - 1].rstrip() + "\u2026"
+        result = "\n".join(lines)
         if hotkey:
-            wrapped += f"\n[{hotkey}]"
-        return wrapped
+            result += f"\n[{hotkey}]"
+        return result
 
     def _clicked(self, *_args):
         if self._drag_blocked:
