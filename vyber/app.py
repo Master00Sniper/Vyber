@@ -714,14 +714,14 @@ class VyberApp:
 
         # --- Tip ---
         tip_frame = ctk.CTkFrame(scroll, fg_color="#1a3a1a", corner_radius=8)
-        tip_frame.pack(fill="x", padx=5, pady=(14, 8))
+        tip_frame.pack(fill="x", padx=15, pady=(14, 8))
         ctk.CTkLabel(
-            tip_frame, font=body, wraplength=450, justify="left",
+            tip_frame, font=body, wraplength=420, justify="left",
             text="Tip: In Vyber, set the output mode to \"Both\" so your "
                  "friends hear the sounds and you do too. If your own voice "
                  "needs to go through as well, make sure \"Mic Passthrough\" "
                  "is enabled in Vyber Settings."
-        ).pack(padx=12, pady=10)
+        ).pack(padx=14, pady=10)
 
         # --- Close button ---
         ctk.CTkButton(outer, text="Got It", width=100,
