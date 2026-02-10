@@ -138,6 +138,10 @@ class VyberApp:
         except Exception as e:
             logger.warning("Audio engine start warning: %s", e)
 
+        # Check for sample rate mismatches after streams are open
+        if self.cable_info.installed:
+            self.root.after(800, self._check_sample_rates)
+
         self.root.mainloop()
 
     def _on_close(self):
@@ -481,3 +485,43 @@ class VyberApp:
             "https://vb-audio.com/Cable/",
             parent=self.root,
         )
+
+    # --- Sample rate mismatch detection ---
+
+    def _check_sample_rates(self):
+        """Check for sample rate mismatches and alert the user."""
+        from vyber.audio_engine import SAMPLE_RATE
+        mismatches = self.audio_engine.check_sample_rate_mismatches()
+        if not mismatches:
+            return
+
+        device_lines = "\n".join(
+            f"  \u2022 {name} ({label}) \u2014 currently {rate} Hz"
+            for label, name, rate in mismatches
+        )
+        answer = messagebox.askyesno(
+            "Audio Sample Rate Mismatch",
+            f"The following audio devices are not set to {SAMPLE_RATE} Hz, "
+            f"which may cause robotic or distorted audio:\n\n"
+            f"{device_lines}\n\n"
+            f"To fix this:\n"
+            f"1. Open Windows Sound settings\n"
+            f"2. Find each device above \u2192 Properties \u2192 Advanced\n"
+            f"3. Set the sample rate to {SAMPLE_RATE} Hz\n\n"
+            f"Would you like to open Windows Sound settings now?",
+            parent=self.root,
+        )
+        if answer:
+            self._open_sound_settings()
+
+    @staticmethod
+    def _open_sound_settings():
+        """Open the Windows Sound control panel."""
+        try:
+            os.startfile("mmsys.cpl")
+        except Exception:
+            try:
+                import subprocess
+                subprocess.Popen(["control", "mmsys.cpl"])
+            except Exception as e:
+                logger.error("Failed to open Sound settings: %s", e)

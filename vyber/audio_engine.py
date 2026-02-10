@@ -332,6 +332,30 @@ class AudioEngine:
             else:
                 self._mic_buffer[:frames] = indata[:frames, :CHANNELS]
 
+    def check_sample_rate_mismatches(self) -> list[tuple[str, str, int]]:
+        """Check all active devices for sample rate mismatches.
+
+        Returns a list of (label, device_name, native_rate) for each mismatch.
+        """
+        mismatches = []
+        devices_to_check = []
+
+        if self.virtual_cable_device is not None:
+            devices_to_check.append((self.virtual_cable_device, "VB-CABLE"))
+        if self.mic_device is not None:
+            devices_to_check.append((self.mic_device, "Microphone"))
+
+        for dev_index, label in devices_to_check:
+            try:
+                info = sd.query_devices(dev_index)
+                native_sr = int(info.get("default_samplerate", 0))
+                if native_sr and native_sr != SAMPLE_RATE:
+                    mismatches.append((label, info.get("name", "Unknown"), native_sr))
+            except Exception:
+                pass
+
+        return mismatches
+
     def _log_device_samplerate(self, device, label: str):
         """Log the device's default sample rate and warn if it differs from ours."""
         try:
