@@ -64,6 +64,8 @@ class HotkeyManager:
             self._stop_all_callback = stop_all_callback
         if self._active:
             self._register_all()
+        logger.info("Registered %d hotkey(s), stop-all='%s'",
+                     len(self._bindings), self._stop_all_hotkey or "none")
 
     def _register_all(self):
         """Register all current bindings with the keyboard library."""

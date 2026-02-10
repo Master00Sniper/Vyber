@@ -1,11 +1,32 @@
 """Settings dialog — audio device selection, VB-CABLE status, preferences."""
 
+import ctypes
+import sys
+import tkinter as tk
+
 import customtkinter as ctk
 from typing import Callable
 import webbrowser
 
+# Dark background color matching CTk dark theme
+_DARK_BG = "#2b2b2b"
 
-class SettingsDialog(ctk.CTkToplevel):
+
+def _set_dark_title_bar(window):
+    """Set the Windows title bar to dark mode (Windows 10 20H1+)."""
+    if sys.platform != "win32":
+        return
+    try:
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        value = ctypes.c_int(1)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 20, ctypes.byref(value), ctypes.sizeof(value)
+        )
+    except Exception:
+        pass
+
+
+class SettingsDialog(tk.Toplevel):
     """Modal settings dialog."""
 
     def __init__(self, master,
@@ -21,6 +42,8 @@ class SettingsDialog(ctk.CTkToplevel):
                  on_install_vb_cable: Callable[[], None] | None = None,
                  icon_path: str | None = None):
         super().__init__(master)
+        self.withdraw()
+        self.configure(bg=_DARK_BG)
 
         self.title("Vyber Settings")
         self.geometry("500x580")
@@ -28,23 +51,21 @@ class SettingsDialog(ctk.CTkToplevel):
         self.transient(master)
         self.grab_set()
 
-        # Center on parent window
-        self.update_idletasks()
-        pw, ph = master.winfo_width(), master.winfo_height()
-        px, py = master.winfo_x(), master.winfo_y()
-        dw, dh = self.winfo_width(), self.winfo_height()
-        x = px + (pw - dw) // 2
-        y = py + (ph - dh) // 2
-        self.geometry(f"500x580+{x}+{y}")
-
-        # Set Vyber icon
+        # Set icon while hidden
         if icon_path:
-            self.after(200, lambda: self.iconbitmap(icon_path))
+            try:
+                self.iconbitmap(icon_path)
+            except Exception:
+                pass
 
         self._on_save = on_save
         self._on_install_vb_cable = on_install_vb_cable
         self._output_devices = output_devices
         self._input_devices = input_devices
+
+        # Outer frame covers tk.Toplevel background
+        self._outer = ctk.CTkFrame(self, fg_color=_DARK_BG)
+        self._outer.pack(fill="both", expand=True)
 
         self._build_ui(
             output_devices, input_devices, cable_installed,
@@ -52,12 +73,26 @@ class SettingsDialog(ctk.CTkToplevel):
             mic_passthrough, sound_overlap
         )
 
+        # Force full render while hidden, then center and show
+        self.update()
+        pw, ph = master.winfo_width(), master.winfo_height()
+        px, py = master.winfo_x(), master.winfo_y()
+        dw, dh = self.winfo_width(), self.winfo_height()
+        x = px + (pw - dw) // 2
+        y = py + (ph - dh) // 2
+        self.geometry(f"+{x}+{y}")
+
+        self.deiconify()
+        _set_dark_title_bar(self)
+        self.lift()
+        self.focus_force()
+
     def _build_ui(self, output_devices, input_devices, cable_installed,
                   current_speaker, current_mic, current_stop_hotkey,
                   mic_passthrough, sound_overlap):
 
         # Scrollable content in case the window is tight
-        content = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        content = ctk.CTkScrollableFrame(self._outer, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=15, pady=(10, 0))
 
         pad = {"padx": 10, "pady": (8, 4)}
@@ -187,7 +222,7 @@ class SettingsDialog(ctk.CTkToplevel):
         ).pack(anchor="w", padx=20, pady=2)
 
         # --- Save / Cancel buttons ---
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame = ctk.CTkFrame(self._outer, fg_color="transparent")
         btn_frame.pack(fill="x", padx=15, pady=(8, 12))
 
         ctk.CTkButton(

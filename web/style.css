@@ -91,17 +91,17 @@ nav ul a:hover {
     text-align: center;
     padding: 4rem 2rem;
     background:
-        radial-gradient(ellipse at 50% 30%, rgba(227, 0, 0, 0.08) 0%, transparent 60%),
-        linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        linear-gradient(180deg, rgba(10, 10, 10, 0.55) 0%, rgba(10, 10, 10, 0.7) 50%, var(--bg-primary) 100%),
+        url('images/vyber_background.png') center center / cover no-repeat;
 }
 
 .hero-content {
-    max-width: 700px;
+    max-width: 900px;
 }
 
 .hero-logo {
-    width: 320px;
-    max-width: 80vw;
+    width: 480px;
+    max-width: 85vw;
     margin-bottom: 1.5rem;
     filter: drop-shadow(0 0 40px var(--accent-glow));
 }
@@ -111,7 +111,7 @@ nav ul a:hover {
     font-weight: 800;
     margin-bottom: 1rem;
     letter-spacing: 0.02em;
-    background: linear-gradient(180deg, var(--chrome-light) 0%, var(--chrome-mid) 60%, var(--chrome-dark) 100%);
+    background: linear-gradient(180deg, #ffffff 0%, var(--accent-hover) 50%, var(--accent-dim) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -408,7 +408,7 @@ footer {
     }
 
     .hero-logo {
-        width: 220px;
+        width: 320px;
     }
 
     .features,

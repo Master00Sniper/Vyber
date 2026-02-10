@@ -1,14 +1,36 @@
 """Main application controller — wires together all components."""
 
+import ctypes
 import logging
 import os
+import platform
 import sys
 import threading
+import time
+import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
 
 import customtkinter as ctk
+import requests
 
 logger = logging.getLogger(__name__)
+
+# Dark background color matching CTk dark theme
+_DARK_BG = "#2b2b2b"
+
+
+def _set_dark_title_bar(window):
+    """Set the Windows title bar to dark mode (Windows 10 20H1+)."""
+    if sys.platform != "win32":
+        return
+    try:
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        value = ctypes.c_int(1)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 20, ctypes.byref(value), ctypes.sizeof(value)
+        )
+    except Exception:
+        pass
 
 from vyber import IMAGES_DIR
 from vyber.config import Config
@@ -38,6 +60,7 @@ class VyberApp:
         self.cable_info = self.cable_manager.detect()
 
         # Configure audio engine from config/detected devices
+        logger.info("VB-CABLE installed: %s", self.cable_info.installed)
         self._configure_audio()
 
         self._install_pending = False
@@ -45,10 +68,10 @@ class VyberApp:
         # Build the GUI
         self.root = ctk.CTk()
         self.root.title("Vyber")
-        w = max(1050, self.config.get("window", "width", default=1050))
+        w = max(1070, self.config.get("window", "width", default=1070))
         h = max(650, self.config.get("window", "height", default=650))
         self.root.geometry(f"{w}x{h}")
-        self.root.minsize(1050, 650)
+        self.root.minsize(1070, 650)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
@@ -80,6 +103,9 @@ class VyberApp:
             "on_clear_category": self._on_clear_category,
             "on_open_settings": self._on_open_settings,
             "on_discord_guide": self._on_discord_guide,
+            "on_refresh_audio": self._on_refresh_audio,
+            "on_help": self._on_help,
+            "on_about": self._on_about,
             "get_categories": self.sound_manager.get_categories,
         })
 
@@ -170,17 +196,36 @@ class VyberApp:
         self.config.save()
         self.root.destroy()
 
-    def _setup_dialog(self, dialog: ctk.CTkToplevel):
-        """Center a dialog on the main window and set the Vyber icon."""
-        dialog.update_idletasks()
+    def _setup_dialog(self, dialog):
+        """Finish a dialog: set icon, center, render, then show without flash.
+
+        Dialogs must be created with tk.Toplevel + withdraw() so this
+        method can set the icon while hidden, force-render all CTk
+        widgets, and only then deiconify for a flash-free appearance.
+        """
+        # Set icon while still hidden
+        if self._ico_path.exists():
+            try:
+                dialog.iconbitmap(str(self._ico_path))
+            except Exception:
+                pass
+
+        # Force full render of all CTk widgets while hidden
+        dialog.update()
+
+        # Center on main window using rendered size
         pw, ph = self.root.winfo_width(), self.root.winfo_height()
         px, py = self.root.winfo_x(), self.root.winfo_y()
         dw, dh = dialog.winfo_width(), dialog.winfo_height()
         x = px + (pw - dw) // 2
         y = py + (ph - dh) // 2
         dialog.geometry(f"+{x}+{y}")
-        if self._ico_path.exists():
-            dialog.after(200, lambda: dialog.iconbitmap(str(self._ico_path)))
+
+        # Show the fully-rendered window
+        dialog.deiconify()
+        _set_dark_title_bar(dialog)
+        dialog.lift()
+        dialog.focus_force()
 
     def _configure_audio(self):
         """Configure audio engine devices from config and detected cables."""
@@ -188,6 +233,8 @@ class VyberApp:
         mic = self.config.get("audio", "mic_device")
         mode = self.config.get("audio", "output_mode", default="both")
         passthrough = self.config.get("audio", "mic_passthrough", default=True)
+        logger.info("Audio config: speaker=%s, mic=%s, mode=%s, passthrough=%s",
+                     speaker, mic, mode, passthrough)
 
         self.audio_engine.speaker_device = speaker
         self.audio_engine.mic_device = mic
@@ -198,6 +245,21 @@ class VyberApp:
             self.audio_engine.virtual_cable_device = self.cable_info.input_device_index
             self.config.set("audio", "virtual_cable_device",
                            self.cable_info.input_device_index)
+
+    def _on_refresh_audio(self):
+        """Re-detect audio devices and restart streams."""
+        logger.info("Refreshing audio devices...")
+        self.cable_info = self.cable_manager.detect()
+        self._configure_audio()
+        self.audio_engine.start()
+        self.main_window.set_cable_status(
+            self.cable_info.installed, self.cable_info.input_device_name
+        )
+        self.main_window.set_cable_available(self.cable_info.installed)
+        logger.info("Audio devices refreshed — VB-CABLE: %s, speaker: %s, mic: %s",
+                     self.cable_info.installed,
+                     self.audio_engine.speaker_device,
+                     self.audio_engine.mic_device)
 
     def _register_hotkeys(self):
         """Register all sound hotkeys and the stop-all hotkey."""
@@ -246,13 +308,17 @@ class VyberApp:
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
                 if overlap == "stop" and sound.path in self.audio_engine.get_playing_filepaths():
+                    logger.info("Stopping sound: %s (overlap=stop)", sound_name)
                     self.audio_engine.stop_sound(sound.path)
                 else:
+                    logger.info("Playing sound: %s [%s] vol=%.0f%%",
+                                sound_name, category, sound.volume * 100)
                     self.audio_engine.play_sound(sound.path, sound.volume)
                 send_telemetry("sound_played")
                 break
 
     def _on_stop_all(self):
+        logger.info("Stop all sounds")
         self.audio_engine.stop_all()
 
     def _on_add_sound(self, category: str):
@@ -269,6 +335,7 @@ class VyberApp:
         for path in paths:
             self.sound_manager.add_sound(category, path)
         if paths:
+            logger.info("Added %d sound(s) to '%s'", len(paths), category)
             self._refresh_tab(category)
             self._register_hotkeys()
 
@@ -281,6 +348,8 @@ class VyberApp:
         if folder:
             added = self.sound_manager.add_sounds_from_directory(folder, category)
             if added:
+                logger.info("Added %d sound(s) from folder to '%s'",
+                            len(added), category)
                 self._refresh_tab(category)
                 self._register_hotkeys()
 
@@ -435,21 +504,26 @@ class VyberApp:
                 current = sound.volume
                 break
 
-        dialog = ctk.CTkToplevel(self.root)
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
         dialog.title(f"Volume — {sound_name}")
         dialog.geometry("300x160")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
 
-        ctk.CTkLabel(dialog, text=sound_name,
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        ctk.CTkLabel(outer, text=sound_name,
                      font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(12, 2))
 
-        label = ctk.CTkLabel(dialog, text=f"{int(current * 100)}%",
+        label = ctk.CTkLabel(outer, text=f"{int(current * 100)}%",
                              font=ctk.CTkFont(size=14))
         label.pack(pady=(0, 0))
 
-        slider = ctk.CTkSlider(dialog, from_=0, to=1, number_of_steps=100,
+        slider = ctk.CTkSlider(outer, from_=0, to=1, number_of_steps=100,
                                 width=250)
         slider.set(current)
         slider.pack(pady=8)
@@ -464,7 +538,7 @@ class VyberApp:
                 category, sound_name, round(slider.get(), 2))
             dialog.destroy()
 
-        ctk.CTkButton(dialog, text="OK", width=80,
+        ctk.CTkButton(outer, text="OK", width=80,
                        command=on_ok).pack(pady=(0, 10))
 
         self._setup_dialog(dialog)
@@ -476,6 +550,7 @@ class VyberApp:
 
     def _on_output_mode_change(self, mode: str):
         """Output mode changed."""
+        logger.info("Output mode changed to '%s'", mode)
         self.audio_engine.set_output_mode(mode)
         self.config.set("audio", "output_mode", mode)
 
@@ -485,6 +560,7 @@ class VyberApp:
                                       parent=self.root)
         if name and name.strip():
             if self.sound_manager.add_category(name.strip()):
+                logger.info("Added category: %s", name.strip())
                 self._refresh_all_tabs()
 
     def _on_remove_category(self, name: str):
@@ -493,6 +569,7 @@ class VyberApp:
                                f"Remove category '{name}' and all its sounds?",
                                parent=self.root):
             if self.sound_manager.remove_category(name):
+                logger.info("Removed category: %s", name)
                 self._refresh_all_tabs()
 
     def _on_clear_category(self, name: str):
@@ -532,14 +609,19 @@ class VyberApp:
 
     def _on_discord_guide(self):
         """Show the Discord setup guide dialog."""
-        dialog = ctk.CTkToplevel(self.root)
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
         dialog.title("Discord Setup Guide")
         dialog.geometry("520x560")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
 
-        scroll = ctk.CTkScrollableFrame(dialog, fg_color="transparent")
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
 
         bold = ctk.CTkFont(size=14, weight="bold")
@@ -587,8 +669,6 @@ class VyberApp:
         toggles = [
             ("Krisp Noise Suppression", "Will filter out your sound effects"),
             ("Echo Cancellation", "Causes audio artifacts on played sounds"),
-            ("Automatic Gain Control", "Fluctuates volume unpredictably"),
-            ("Advanced Voice Activity", "Can block soundboard audio from transmitting"),
         ]
         for name, reason in toggles:
             row = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -634,23 +714,412 @@ class VyberApp:
 
         # --- Tip ---
         tip_frame = ctk.CTkFrame(scroll, fg_color="#1a3a1a", corner_radius=8)
-        tip_frame.pack(fill="x", padx=5, pady=(14, 8))
+        tip_frame.pack(fill="x", padx=15, pady=(14, 8))
         ctk.CTkLabel(
-            tip_frame, font=body, wraplength=450, justify="left",
+            tip_frame, font=body, wraplength=420, justify="left",
             text="Tip: In Vyber, set the output mode to \"Both\" so your "
                  "friends hear the sounds and you do too. If your own voice "
                  "needs to go through as well, make sure \"Mic Passthrough\" "
                  "is enabled in Vyber Settings."
-        ).pack(padx=12, pady=10)
+        ).pack(padx=14, pady=10)
 
         # --- Close button ---
-        ctk.CTkButton(dialog, text="Got It", width=100,
+        ctk.CTkButton(outer, text="Got It", width=100,
+                       command=dialog.destroy).pack(pady=(8, 12))
+
+        self._setup_dialog(dialog)
+
+    def _on_help(self):
+        """Show the Help / Report a Bug dialog."""
+        from vyber import __version__
+        from vyber.telemetry import AUTH_KEY
+
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Help — Report a Bug")
+        dialog.geometry("540x620")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
+
+        heading = ctk.CTkFont(size=16, weight="bold")
+        bold = ctk.CTkFont(size=14, weight="bold")
+        body = ctk.CTkFont(size=13)
+
+        # --- Title ---
+        ctk.CTkLabel(scroll, text="Help & Bug Reports",
+                     font=heading).pack(anchor="center", pady=(5, 2))
+        ctk.CTkLabel(
+            scroll, font=body, text_color="gray60",
+            text="Get help with Vyber or submit a bug report to GitHub Issues.",
+        ).pack(anchor="center", pady=(0, 10))
+
+        # --- How Vyber Works ---
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=8)
+        ctk.CTkLabel(scroll, text="How Vyber Works",
+                     font=bold).pack(anchor="center", pady=(8, 4))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=480, justify="left",
+            text="Vyber is a soundboard that plays audio through your speakers "
+                 "and into voice chat at the same time. It uses VB-CABLE to "
+                 "route audio into a virtual microphone that Discord (or any "
+                 "voice app) picks up as your input device.\n\n"
+                 "  \u2022  Add sounds, organize them into categories\n"
+                 "  \u2022  Set global hotkeys to trigger sounds from any app\n"
+                 "  \u2022  Mic Passthrough mixes your real voice in so friends "
+                 "hear both you and your sounds",
+        ).pack(anchor="w", padx=20, pady=(0, 4))
+
+        # --- Troubleshooting ---
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=8)
+        ctk.CTkLabel(scroll, text="Troubleshooting",
+                     font=bold).pack(anchor="center", pady=(8, 4))
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=480, justify="left",
+            text="If Vyber isn't working as expected:\n\n"
+                 "  \u2022  Make sure VB-CABLE is installed (restart PC after install)\n"
+                 "  \u2022  Set Discord's Input Device to \"CABLE Output\"\n"
+                 "  \u2022  Disable Discord's voice processing (see Discord Setup)\n"
+                 "  \u2022  Click \"Refresh Audio Devices\" in the menu if you changed\n"
+                 "     audio devices after launching Vyber\n"
+                 "  \u2022  Try setting the output mode to \"Both\"",
+        ).pack(anchor="w", padx=20, pady=(0, 4))
+
+        # --- Bug Report ---
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=8)
+        ctk.CTkLabel(scroll, text="Report a Bug",
+                     font=bold).pack(anchor="center", pady=(8, 2))
+        ctk.CTkLabel(
+            scroll, font=body, text_color="gray60",
+            text="Your report will be submitted to GitHub Issues.",
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkLabel(scroll, text="Title (brief summary)",
+                     font=body).pack(anchor="center", pady=(2, 2))
+        title_entry = ctk.CTkEntry(scroll, width=400, height=32,
+                                   placeholder_text="e.g., Sound doesn't play through Discord")
+        title_entry.pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkLabel(scroll, text="Description (steps to reproduce)",
+                     font=body).pack(anchor="center", pady=(2, 2))
+        desc_textbox = ctk.CTkTextbox(scroll, width=400, height=100, wrap="word")
+        desc_textbox.pack(anchor="center", pady=(0, 8))
+
+        checkbox_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+        checkbox_frame.pack(anchor="center", pady=(2, 2))
+
+        include_system_var = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            checkbox_frame,
+            text="Include system info (OS, Vyber version)",
+            variable=include_system_var, font=body,
+        ).pack(anchor="w", pady=(2, 4))
+
+        include_logs_var = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            checkbox_frame,
+            text="Include recent logs (last 250 lines)",
+            variable=include_logs_var, font=body,
+        ).pack(anchor="w", pady=(0, 4))
+
+        ctk.CTkLabel(
+            scroll, font=ctk.CTkFont(size=11), text_color="gray50",
+            text="Your Windows username is redacted from logs. Other\n"
+                 "folder names in paths may be visible in the report.",
+        ).pack(anchor="center", pady=(0, 6))
+
+        status_label = ctk.CTkLabel(scroll, text="", font=body)
+        status_label.pack(anchor="center", pady=(0, 4))
+
+        submit_time = [0.0]
+
+        def _get_system_info():
+            import re as _re
+            lines = [
+                f"- **Vyber Version**: {__version__}",
+                f"- **OS**: {platform.system()} {platform.release()} "
+                f"({platform.version()})",
+                f"- **Python**: {platform.python_version()}",
+                f"- **Architecture**: {platform.machine()}",
+            ]
+            return "\n".join(lines)
+
+        def _get_recent_logs(num_lines=250):
+            """Read the last N lines from the log file, redacting usernames."""
+            import re as _re
+            from vyber.config import LOG_FILE
+            if not LOG_FILE.exists():
+                return None
+            try:
+                with open(LOG_FILE, "r", encoding="utf-8",
+                          errors="replace") as f:
+                    all_lines = f.readlines()
+                recent = all_lines[-num_lines:] if len(all_lines) > num_lines else all_lines
+                text = "".join(recent).strip()
+                # Redact Windows usernames from paths
+                text = _re.sub(
+                    r'(C:[/\\][Uu]sers[/\\])([^/\\]+)([/\\])',
+                    r'\1[REDACTED]\3', text)
+                return text
+            except Exception:
+                return None
+
+        def _submit():
+            submit_btn.configure(state="disabled", fg_color="gray50")
+            submit_time[0] = time.time()
+
+            def _re_enable():
+                elapsed = time.time() - submit_time[0]
+                remaining = max(0, 5.0 - elapsed)
+
+                def _do_enable():
+                    try:
+                        submit_btn.configure(state="normal",
+                                             fg_color="#2563eb")
+                    except Exception:
+                        pass  # dialog already closed
+
+                self.root.after(int(remaining * 1000), _do_enable)
+
+            title = title_entry.get().strip()
+            desc = desc_textbox.get("1.0", "end-1c").strip()
+            if not title:
+                status_label.configure(
+                    text="Please enter a title.", text_color="#ff6b6b")
+                _re_enable()
+                return
+            if not desc:
+                status_label.configure(
+                    text="Please describe the bug.", text_color="#ff6b6b")
+                _re_enable()
+                return
+
+            body_parts = ["## Description", desc]
+            if include_system_var.get():
+                body_parts.append("\n## System Information")
+                body_parts.append(_get_system_info())
+            if include_logs_var.get():
+                recent_logs = _get_recent_logs(250)
+                if recent_logs:
+                    body_parts.append("\n## Recent Logs")
+                    body_parts.append("<details>")
+                    body_parts.append(
+                        "<summary>Click to expand logs "
+                        "(last 250 lines)</summary>")
+                    body_parts.append("")
+                    body_parts.append("```")
+                    body_parts.append(recent_logs)
+                    body_parts.append("```")
+                    body_parts.append("</details>")
+            body_parts.append("\n---")
+            body_parts.append("*Submitted via Vyber*")
+            issue_body = "\n".join(body_parts)
+
+            status_label.configure(text="Submitting...",
+                                   text_color="gray60")
+            self.root.update()
+
+            def _safe_configure(widget, **kwargs):
+                try:
+                    widget.configure(**kwargs)
+                except Exception:
+                    pass  # dialog already closed
+
+            def _do_submit():
+                try:
+                    resp = requests.post(
+                        "https://vyber-proxy.mortonapps.com/repos/Master00Sniper/Vyber/issues",
+                        headers={
+                            "Accept": "application/vnd.github.v3+json",
+                            "User-Agent": f"Vyber/{__version__}",
+                            "X-Vyber-Auth": AUTH_KEY,
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "title": f"[Bug Report] {title}",
+                            "body": issue_body,
+                        },
+                        timeout=15,
+                    )
+                    if resp.status_code == 201:
+                        num = resp.json().get("number", "?")
+                        self.root.after(0, lambda: _safe_configure(
+                            status_label,
+                            text=f"Submitted! (Issue #{num})",
+                            text_color="#4ade80"))
+                        self.root.after(0, lambda: (
+                            title_entry.delete(0, "end"),
+                            desc_textbox.delete("1.0", "end"),
+                        ))
+                    else:
+                        detail = resp.text[:200]
+                        logger.error("Bug report failed: HTTP %d — %s",
+                                     resp.status_code, detail)
+                        self.root.after(0, lambda: _safe_configure(
+                            status_label,
+                            text=f"Failed (HTTP {resp.status_code}): {detail}",
+                            text_color="#ff6b6b"))
+                except requests.exceptions.Timeout:
+                    self.root.after(0, lambda: _safe_configure(
+                        status_label,
+                        text="Request timed out.", text_color="#ff6b6b"))
+                except Exception:
+                    self.root.after(0, lambda: _safe_configure(
+                        status_label,
+                        text="Network error.", text_color="#ff6b6b"))
+                self.root.after(0, _re_enable)
+
+            threading.Thread(target=_do_submit, daemon=True).start()
+
+        submit_btn = ctk.CTkButton(
+            scroll, text="Submit Bug Report", width=180,
+            fg_color="#2563eb", hover_color="#1d4ed8", command=_submit)
+        submit_btn.pack(anchor="center", pady=(4, 20))
+
+        # --- Close ---
+        ctk.CTkButton(outer, text="Close", width=100,
+                       command=dialog.destroy).pack(pady=(8, 12))
+
+        self._setup_dialog(dialog)
+
+    def _on_about(self):
+        """Show the About Vyber dialog."""
+        from vyber import __version__
+
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("About Vyber")
+        dialog.geometry("480x540")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
+
+        heading = ctk.CTkFont(size=20, weight="bold")
+        bold = ctk.CTkFont(size=14, weight="bold")
+        body = ctk.CTkFont(size=13)
+
+        # --- Title & version ---
+        ctk.CTkLabel(scroll, text="Vyber",
+                     font=heading).pack(anchor="center", pady=(10, 2))
+        ctk.CTkLabel(scroll, text=f"Version {__version__}",
+                     font=body).pack(anchor="center", pady=(0, 10))
+
+        # --- Description ---
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=420, justify="center",
+            text="Vyber is a free, open-source soundboard for Windows that "
+                 "plays audio through your speakers and into voice chat at the "
+                 "same time. Built for Discord, gaming, and streaming — no "
+                 "complicated audio routing required.",
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Developer ---
+        ctk.CTkLabel(scroll, text="Developed by",
+                     font=body).pack(anchor="center", pady=(4, 0))
+        ctk.CTkLabel(scroll, text="Greg Morton (@Master00Sniper)",
+                     font=ctk.CTkFont(size=15, weight="bold")).pack(
+                         anchor="center", pady=(0, 8))
+
+        ctk.CTkLabel(
+            scroll, font=body, wraplength=420, justify="center",
+            text="I'm a passionate gamer, Sr. Systems Administrator, wine "
+                 "enthusiast, and proud small winery owner. Vyber was born from "
+                 "wanting a dead-simple soundboard that actually works in voice "
+                 "chat. I hope it makes your sessions more fun!",
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Support ---
+        ctk.CTkLabel(scroll, text="Support Development",
+                     font=bold).pack(anchor="center", pady=(4, 4))
+        ctk.CTkLabel(
+            scroll, font=body, justify="center",
+            text="If Vyber has made your voice chats better,\nconsider "
+                 "supporting development!",
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkButton(
+            scroll, text="Support on Ko-fi", width=200,
+            fg_color="#2563eb", hover_color="#1d4ed8",
+            command=lambda: os.startfile("https://ko-fi.com/master00sniper"),
+        ).pack(anchor="center", pady=(0, 8))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Contact ---
+        ctk.CTkLabel(scroll, text="Contact & Connect",
+                     font=bold).pack(anchor="center", pady=(4, 4))
+        ctk.CTkLabel(scroll, text="Email: greg@mortonapps.com",
+                     font=body).pack(anchor="center", pady=2)
+
+        x_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+        x_frame.pack(anchor="center", pady=2)
+        ctk.CTkLabel(x_frame, text="X: ", font=body).pack(side="left")
+        x_link = ctk.CTkLabel(
+            x_frame, text="x.com/master00sniper",
+            font=ctk.CTkFont(size=13, underline=True),
+            text_color="#1DA1F2", cursor="hand2")
+        x_link.pack(side="left")
+        x_link.bind("<Button-1>",
+                     lambda e: os.startfile("https://x.com/master00sniper"))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Copyright ---
+        ctk.CTkLabel(
+            scroll, font=ctk.CTkFont(size=11),
+            text="\u00a9 2025-2026 Greg Morton (@Master00Sniper)",
+        ).pack(anchor="center", pady=(4, 2))
+        ctk.CTkLabel(
+            scroll, font=ctk.CTkFont(size=11), text_color="gray50",
+            text="Licensed under the GNU General Public License v3.0",
+        ).pack(anchor="center", pady=(0, 4))
+        ctk.CTkLabel(
+            scroll, font=ctk.CTkFont(size=10), text_color="gray50",
+            wraplength=420, justify="center",
+            text="This program is distributed in the hope that it will be "
+                 "useful, but WITHOUT ANY WARRANTY; without even the implied "
+                 "warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR "
+                 "PURPOSE. See the GPL v3 license for details.",
+        ).pack(anchor="center", pady=(0, 16))
+
+        # --- Close ---
+        ctk.CTkButton(outer, text="Close", width=100,
                        command=dialog.destroy).pack(pady=(8, 12))
 
         self._setup_dialog(dialog)
 
     def _apply_settings(self, settings: dict):
         """Apply settings from the settings dialog."""
+        logger.info("Applying settings: speaker=%s, mic=%s, passthrough=%s, "
+                     "stop_key=%s, overlap=%s",
+                     settings["speaker_device"], settings["mic_device"],
+                     settings["mic_passthrough"], settings["stop_all_hotkey"],
+                     settings["sound_overlap"])
         self.config.set("audio", "output_device", settings["speaker_device"])
         self.config.set("audio", "mic_device", settings["mic_device"])
         self.config.set("audio", "mic_passthrough", settings["mic_passthrough"])
@@ -673,16 +1142,15 @@ class VyberApp:
 
     def _prompt_vb_cable_install(self):
         """Show a dialog offering to install VB-CABLE if not detected."""
-        answer = messagebox.askyesno(
-            "VB-CABLE Not Detected",
-            "VB-CABLE virtual audio driver is required for microphone "
-            "output.\n\n"
-            "Would you like to download and install it now?\n"
-            "(You will need to approve an admin prompt.)",
+        messagebox.showinfo(
+            "VB-CABLE Required",
+            "Vyber requires the VB-CABLE virtual audio driver to send "
+            "sounds through voice chat.\n\n"
+            "Press OK to download and install VB-CABLE.\n"
+            "You will need to approve an admin prompt.",
             parent=self.root,
         )
-        if answer:
-            self._start_vb_cable_install()
+        self._start_vb_cable_install()
 
     def _start_vb_cable_install(self):
         """Kick off the background download-and-install process."""
@@ -705,10 +1173,9 @@ class VyberApp:
         """Called when the VB-CABLE installer has been launched."""
         self._install_pending = False
         messagebox.showinfo(
-            "VB-CABLE Installer",
-            "The VB-CABLE installer has been launched.\n\n"
-            "After it finishes, please restart Vyber so the new "
-            "audio device can be detected.",
+            "Restart Required",
+            "VB-CABLE has been installed.\n\n"
+            "Please restart your computer to finish the installation.",
             parent=self.root,
         )
         # Re-scan immediately in case the driver is already active
