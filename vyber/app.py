@@ -10,6 +10,7 @@ import customtkinter as ctk
 
 logger = logging.getLogger(__name__)
 
+from vyber import IMAGES_DIR
 from vyber.config import Config
 from vyber.audio_engine import AudioEngine
 from vyber.virtual_cable import VirtualCableManager
@@ -18,6 +19,7 @@ from vyber.hotkey_manager import HotkeyManager
 from vyber.ui.main_window import MainWindow
 from vyber.ui.settings_dialog import SettingsDialog
 from vyber import vb_cable_installer
+from vyber.tray_manager import TrayManager
 
 
 class VyberApp:
@@ -50,6 +52,11 @@ class VyberApp:
         ctk.set_default_color_theme("blue")
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        # Set window icon
+        ico_path = IMAGES_DIR / "vyber.ico"
+        if ico_path.exists():
+            self.root.iconbitmap(str(ico_path))
 
         # Create main window with callbacks
         self.main_window = MainWindow(self.root, callbacks={
@@ -92,6 +99,16 @@ class VyberApp:
         if not self.cable_info.installed:
             self.root.after(500, self._prompt_vb_cable_install)
 
+        # System tray icon
+        tray_icon_path = IMAGES_DIR / "tray_icon.png"
+        self.tray = TrayManager(
+            icon_path=str(tray_icon_path),
+            on_show=lambda: self.root.after(0, self._show_from_tray),
+            on_quit=lambda: self.root.after(0, self._quit_from_tray),
+        )
+        if self.tray.available:
+            self.tray.start()
+
         # Register hotkeys
         self._register_hotkeys()
         self.hotkey_manager.start()
@@ -109,7 +126,25 @@ class VyberApp:
         self.root.mainloop()
 
     def _on_close(self):
-        """Clean shutdown."""
+        """Minimize to tray on window close, or quit if tray unavailable."""
+        if self.tray.available:
+            self.root.withdraw()
+        else:
+            self._full_shutdown()
+
+    def _show_from_tray(self):
+        """Restore the window from the system tray."""
+        self.root.deiconify()
+        self.root.lift()
+        self.root.focus_force()
+
+    def _quit_from_tray(self):
+        """Quit from the tray menu."""
+        self._full_shutdown()
+
+    def _full_shutdown(self):
+        """Clean shutdown — stop everything and exit."""
+        self.tray.stop()
         self.hotkey_manager.stop()
         self.audio_engine.stop()
         self.config.save()

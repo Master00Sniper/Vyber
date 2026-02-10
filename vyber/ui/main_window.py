@@ -2,7 +2,9 @@
 
 import customtkinter as ctk
 from typing import Callable
+from PIL import Image
 
+from vyber import IMAGES_DIR
 from vyber.ui.widgets import VolumeSlider, OutputModeSelector, StatusBar
 from vyber.ui.sound_grid import SoundGrid
 
@@ -41,6 +43,19 @@ class MainWindow:
         # --- Top control bar ---
         self.top_frame = ctk.CTkFrame(self.root)
         self.top_frame.pack(fill="x", padx=10, pady=(10, 5))
+
+        # Logo
+        logo_path = IMAGES_DIR / "vyber_logo.png"
+        if logo_path.exists():
+            logo_img = ctk.CTkImage(
+                light_image=Image.open(logo_path),
+                dark_image=Image.open(logo_path),
+                size=(100, 36),
+            )
+            self.logo_label = ctk.CTkLabel(
+                self.top_frame, image=logo_img, text=""
+            )
+            self.logo_label.pack(side="left", padx=(5, 10))
 
         # Output mode selector
         self.output_mode = OutputModeSelector(
