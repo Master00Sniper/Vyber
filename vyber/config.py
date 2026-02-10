@@ -24,7 +24,7 @@ def _get_data_dir() -> Path:
 DATA_DIR = _get_data_dir()
 CONFIG_DIR = DATA_DIR
 CONFIG_FILE = CONFIG_DIR / "config.json"
-LOG_FILE = DATA_DIR / "vyber.log"
+LOG_FILE = DATA_DIR / "vyber_log.txt"
 
 DEFAULT_CONFIG = {
     "sounds_directory": "",

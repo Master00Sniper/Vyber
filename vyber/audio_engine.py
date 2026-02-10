@@ -146,7 +146,7 @@ class AudioEngine:
         self._stop_streams()
 
         try:
-            if self.output_mode in ("speakers", "both") and self.speaker_device is not None:
+            if self.output_mode in ("speakers", "both"):
                 self._speaker_stream = sd.OutputStream(
                     samplerate=SAMPLE_RATE,
                     channels=CHANNELS,
@@ -174,14 +174,15 @@ class AudioEngine:
             logger.error("Failed to open virtual cable stream: %s", e)
 
         try:
-            if self.mic_passthrough and self.mic_device is not None and self.virtual_cable_device is not None:
-                mic_info = sd.query_devices(self.mic_device)
+            if self.mic_passthrough and self.virtual_cable_device is not None:
+                mic_dev = self.mic_device  # None = system default mic
+                mic_info = sd.query_devices(mic_dev, kind="input")
                 mic_channels = min(mic_info["max_input_channels"], CHANNELS)
                 self._mic_stream = sd.InputStream(
                     samplerate=SAMPLE_RATE,
                     channels=mic_channels,
                     blocksize=BLOCK_SIZE,
-                    device=self.mic_device,
+                    device=mic_dev,
                     callback=self._mic_callback,
                     dtype="float32"
                 )
