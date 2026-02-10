@@ -1170,12 +1170,12 @@ class VyberApp:
         )
 
     def _on_install_finished(self):
-        """Called when the VB-CABLE installer has been launched."""
+        """Called when the VB-CABLE installer has finished."""
         self._install_pending = False
         messagebox.showinfo(
             "Restart Required",
-            "VB-CABLE has been installed.\n\n"
-            "Please restart your computer to finish the installation.",
+            "The VB-CABLE installer has finished.\n\n"
+            "Please restart your computer to complete the setup.",
             parent=self.root,
         )
         # Re-scan immediately in case the driver is already active
