@@ -43,7 +43,7 @@ DEFAULT_CONFIG = {
         "mic_passthrough": True
     },
     "preferences": {
-        "sound_overlap": "overlap"  # "overlap" or "stop"
+        "sound_overlap": "stop"  # "overlap" or "stop"
     },
     "window": {
         "width": 1100,
