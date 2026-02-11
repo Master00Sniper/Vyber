@@ -270,7 +270,6 @@ class VyberApp:
             volume = sound.volume
             def _hotkey_play(fp=filepath, v=volume):
                 self.audio_engine.play_sound(fp, v)
-                send_telemetry("hotkey_used")
             mappings[hotkey] = _hotkey_play
 
         stop_key = self.config.get("hotkeys", "stop_all", default="escape")
@@ -315,7 +314,6 @@ class VyberApp:
                     logger.info("Playing sound: %s [%s] vol=%.0f%%",
                                 sound_name, category, sound.volume * 100)
                     self.audio_engine.play_sound(sound.path, sound.volume)
-                send_telemetry("sound_played")
                 break
 
     def _on_stop_all(self):

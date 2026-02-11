@@ -148,12 +148,14 @@ async function handleRequest(request) {
         });
       }
 
-      // Track total events per day
-      const eventKey = `events:${today}:${event}`;
-      const eventCount = parseInt(await VYBER_TELEMETRY.get(eventKey) || '0') + 1;
-      await VYBER_TELEMETRY.put(eventKey, eventCount.toString(), {
-        expirationTtl: 60 * 60 * 24 * 90
-      });
+      // Track total events per day (only low-frequency events to conserve KV ops)
+      if (event === 'app_start' || event === 'heartbeat') {
+        const eventKey = `events:${today}:${event}`;
+        const eventCount = parseInt(await VYBER_TELEMETRY.get(eventKey) || '0') + 1;
+        await VYBER_TELEMETRY.put(eventKey, eventCount.toString(), {
+          expirationTtl: 60 * 60 * 24 * 90
+        });
+      }
 
       // Track version distribution
       if (version) {
@@ -186,15 +188,11 @@ async function handleRequest(request) {
       const dau = await VYBER_TELEMETRY.get(`dau:${today}`, { type: 'json' }) || [];
       const starts = await VYBER_TELEMETRY.get(`events:${today}:app_start`) || '0';
       const heartbeats = await VYBER_TELEMETRY.get(`events:${today}:heartbeat`) || '0';
-      const soundsPlayed = await VYBER_TELEMETRY.get(`events:${today}:sound_played`) || '0';
-      const hotkeysUsed = await VYBER_TELEMETRY.get(`events:${today}:hotkey_used`) || '0';
 
       return new Response(JSON.stringify({
         date: today,
         daily_active_users: dau.length,
         app_starts: parseInt(starts),
-        sounds_played: parseInt(soundsPlayed),
-        hotkeys_used: parseInt(hotkeysUsed),
         heartbeats: parseInt(heartbeats)
       }, null, 2), {
         status: 200,
