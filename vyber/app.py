@@ -557,13 +557,45 @@ class VyberApp:
         self.config.set("audio", "output_mode", mode)
 
     def _on_add_category(self):
-        """Add a new category."""
-        name = simpledialog.askstring("New Category", "Category name:",
-                                      parent=self.root)
-        if name and name.strip():
-            if self.sound_manager.add_category(name.strip()):
-                logger.info("Added category: %s", name.strip())
-                self._refresh_all_tabs()
+        """Add a new category via a themed dialog."""
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("New Category")
+        dialog.geometry("320x140")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        ctk.CTkLabel(outer, text="Category name:",
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(15, 5))
+
+        entry = ctk.CTkEntry(outer, width=250, placeholder_text="e.g. Memes")
+        entry.pack(pady=(0, 10))
+
+        def on_ok(_event=None):
+            name = entry.get().strip()
+            if name:
+                if self.sound_manager.add_category(name):
+                    logger.info("Added category: %s", name)
+                    self._refresh_all_tabs()
+            dialog.destroy()
+
+        btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
+        btn_frame.pack(pady=(0, 10))
+
+        ctk.CTkButton(btn_frame, text="OK", width=80,
+                       command=on_ok).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Cancel", width=80,
+                       fg_color="#444444", hover_color="#555555",
+                       command=dialog.destroy).pack(side="left", padx=5)
+
+        entry.bind("<Return>", on_ok)
+        self._setup_dialog(dialog)
+        entry.focus_set()
 
     def _on_remove_category(self, name: str):
         """Remove a category."""

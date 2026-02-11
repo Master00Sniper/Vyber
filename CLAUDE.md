@@ -30,6 +30,12 @@ A Windows soundboard app that plays audio through speakers and virtual microphon
 - **Sound overlap setting** defaults to `"stop"` (clicking a playing sound stops it). Alternative is `"overlap"` (layers another instance).
 - **Context menu callbacks in sound_grid.py** — watch for lambda capture issues. The `on_move` callback takes 3 args: `(source_category, sound_name, target_category)`.
 - **File dialogs** default to `~/Music` (falls back to `~/Documents` then `~`). See `_default_sound_dir()` in app.py.
+- **Popup dialogs must use the themed pattern** — never use `simpledialog.askstring` or other default tkinter dialogs (they appear white/unstyled with the wrong icon). Instead:
+  1. Create with `tk.Toplevel(self.root)` + `dialog.withdraw()` (start hidden)
+  2. `dialog.configure(bg=_DARK_BG)`, set title/geometry/`resizable(False, False)`/`transient(self.root)`/`grab_set()`
+  3. Build content with CTk widgets inside `ctk.CTkFrame(dialog, fg_color=_DARK_BG)`
+  4. Call `self._setup_dialog(dialog)` last — sets icon, force-renders, centers, then shows without flash
+- **Telemetry events**: Only `app_start` and `heartbeat` are sent to the server. `sound_played` and `hotkey_used` were removed to conserve Cloudflare KV free tier usage.
 
 ## Build & Run
 - `python run.py` to run from source
