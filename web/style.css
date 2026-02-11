@@ -103,6 +103,7 @@ nav ul a:hover {
     width: 480px;
     max-width: 85vw;
     margin-bottom: 0;
+    transform: translateY(-20px);
     filter: drop-shadow(0 0 40px var(--accent-glow));
 }
 
@@ -111,6 +112,7 @@ nav ul a:hover {
     font-weight: 800;
     margin-top: 2.5rem;
     margin-bottom: 1rem;
+    transform: translateY(30px);
     letter-spacing: 0.02em;
     background: linear-gradient(180deg, #ffffff 0%, var(--accent-hover) 50%, var(--accent-dim) 100%);
     -webkit-background-clip: text;
