@@ -207,10 +207,27 @@ class MainWindow:
             pass
 
     def _tab_context_menu(self, event):
-        """Show right-click menu on the current tab."""
-        current = self.tabview.get()
-        if not current:
+        """Show right-click menu on the right-clicked tab."""
+        # Determine which tab was right-clicked by matching the event widget
+        # to the segmented button's internal button widgets (widget paths
+        # are hierarchical, so a child's path starts with its parent's path).
+        clicked_tab = None
+        try:
+            seg_button = self.tabview._segmented_button
+            ev_path = str(event.widget)
+            for name, btn in seg_button._buttons_dict.items():
+                btn_path = str(btn)
+                if ev_path == btn_path or ev_path.startswith(btn_path + "."):
+                    clicked_tab = name
+                    break
+        except (AttributeError, Exception):
+            pass
+
+        if not clicked_tab:
+            clicked_tab = self.tabview.get()
+        if not clicked_tab:
             return
+
         menu = Menu(self.root, tearoff=0)
         menu.configure(
             bg="#2b2b2b", fg="white", activebackground="#404040",
@@ -218,12 +235,12 @@ class MainWindow:
         )
         menu.add_command(
             label="Delete All Sounds",
-            command=lambda: self.callbacks["on_clear_category"](current)
+            command=lambda: self.callbacks["on_clear_category"](clicked_tab)
         )
-        if current != "General":
+        if clicked_tab != "General":
             menu.add_command(
-                label=f"Delete \"{current}\"",
-                command=lambda: self.callbacks["on_remove_category"](current)
+                label=f"Delete \"{clicked_tab}\"",
+                command=lambda: self.callbacks["on_remove_category"](clicked_tab)
             )
         menu.tk_popup(event.x_root, event.y_root)
 
