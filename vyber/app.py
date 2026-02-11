@@ -772,7 +772,7 @@ class VyberApp:
         dialog.withdraw()
         dialog.configure(bg=_DARK_BG)
         dialog.title("Help — Report a Bug")
-        dialog.geometry("540x620")
+        dialog.geometry("580x620")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
@@ -801,7 +801,7 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="How Vyber Works",
                      font=bold).pack(anchor="center", pady=(8, 4))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=480, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="Vyber is a soundboard that plays audio through your speakers "
                  "and into voice chat at the same time. It uses VB-CABLE to "
                  "route audio into a virtual microphone that Discord (or any "
@@ -818,7 +818,7 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="Troubleshooting",
                      font=bold).pack(anchor="center", pady=(8, 4))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=480, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="If Vyber isn't working as expected:\n\n"
                  "  \u2022  Make sure VB-CABLE is installed (restart PC after install)\n"
                  "  \u2022  Set Discord's Input Device to \"CABLE Output\"\n"
