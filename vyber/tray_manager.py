@@ -16,18 +16,15 @@ except ImportError:
 class TrayManager:
     """Manages the system tray icon and its menu."""
 
-    def __init__(self, icon_path: str, on_show: callable, on_quit: callable,
-                 on_check_update: callable = None):
+    def __init__(self, icon_path: str, on_show: callable, on_quit: callable):
         """
         Args:
             icon_path: Path to the tray icon image (PNG).
             on_show: Callback to restore/show the main window.
             on_quit: Callback to fully quit the application.
-            on_check_update: Callback to manually check for updates.
         """
         self._on_show = on_show
         self._on_quit = on_quit
-        self._on_check_update = on_check_update
         self._icon = None
         self._icon_image = None
 
@@ -43,7 +40,6 @@ class TrayManager:
 
         menu = pystray.Menu(
             pystray.MenuItem("Show Vyber", self._show, default=True),
-            pystray.MenuItem("Check for Updates", self._check_update),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", self._quit),
         )
@@ -72,10 +68,6 @@ class TrayManager:
     def _show(self, icon=None, item=None):
         if self._on_show:
             self._on_show()
-
-    def _check_update(self, icon=None, item=None):
-        if self._on_check_update:
-            self._on_check_update()
 
     def _quit(self, icon=None, item=None):
         if self._on_quit:

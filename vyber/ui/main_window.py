@@ -171,6 +171,8 @@ class MainWindow:
                          command=self.callbacks.get("on_discord_guide"))
         menu.add_command(label="Refresh Audio Devices",
                          command=self.callbacks.get("on_refresh_audio"))
+        menu.add_command(label="Check for Updates",
+                         command=self.callbacks.get("on_check_update"))
         menu.add_separator()
         menu.add_command(label="Help / Report a Bug",
                          command=self.callbacks.get("on_help"))

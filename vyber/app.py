@@ -105,6 +105,7 @@ class VyberApp:
             "on_open_settings": self._on_open_settings,
             "on_discord_guide": self._on_discord_guide,
             "on_refresh_audio": self._on_refresh_audio,
+            "on_check_update": self._on_check_update,
             "on_help": self._on_help,
             "on_about": self._on_about,
             "get_categories": self.sound_manager.get_categories,
@@ -139,7 +140,6 @@ class VyberApp:
             icon_path=str(tray_icon_path),
             on_show=lambda: self.root.after(0, self._show_from_tray),
             on_quit=lambda: self.root.after(0, self._quit_from_tray),
-            on_check_update=lambda: self.root.after(0, self._on_check_update),
         )
         if self.tray.available:
             self.tray.start()
