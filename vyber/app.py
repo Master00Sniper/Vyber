@@ -757,29 +757,35 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="Step 1 — Set Your Input Device",
                      font=bold).pack(anchor="w", pady=(8, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="In Discord, go to Settings > Voice & Video.\n\n"
                  "Under INPUT DEVICE, select:\n"
                  "    CABLE Output (VB-Audio Virtual Cable)\n\n"
                  "This tells Discord to listen to VB-CABLE, which is "
-                 "where Vyber sends its audio."
+                 "where Vyber sends its audio.\n\n"
+                 "Note: Discord won't pick up any audio when Vyber "
+                 "isn't running, since VB-CABLE is a virtual device "
+                 "that only carries audio from Vyber."
         ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
 
         # --- Step 2 ---
-        ctk.CTkLabel(scroll, text="Step 2 — Use Push to Talk or Voice Activity",
+        ctk.CTkLabel(scroll, text="Step 2 — Input Sensitivity",
                      font=bold).pack(anchor="w", pady=(12, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
-            text="If using Voice Activity, set the sensitivity slider manually "
-                 "rather than relying on automatic detection, since VB-CABLE "
-                 "audio levels differ from a real microphone."
+            scroll, font=body, wraplength=440, justify="left",
+            text="Uncheck \"Automatically determine input sensitivity\" "
+                 "and manually set the sensitivity slider as low as your "
+                 "quietest sound clip. This prevents Discord from cutting "
+                 "off quieter sounds.\n\n"
+                 "Tip: You can also right-click any sound in Vyber and "
+                 "adjust its volume up to 200% if it's too quiet."
         ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
 
         # --- Step 3 ---
         ctk.CTkLabel(scroll, text="Step 3 — Disable Audio Processing",
                      font=bold).pack(anchor="w", pady=(12, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="Discord's audio processing is designed for real "
                  "microphones and will distort soundboard audio. "
                  "Scroll down to the Voice Processing section and "
@@ -803,7 +809,7 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="Step 4 — Advanced Voice Settings",
                      font=bold).pack(anchor="w", pady=(14, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="Expand \"Advanced Voice Settings\" at the bottom of "
                  "the Voice & Video page and also disable:"
         ).pack(anchor="w", padx=(10, 0), pady=(0, 6))
@@ -825,7 +831,7 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="Step 5 — Global Attenuation",
                      font=bold).pack(anchor="w", pady=(14, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="Set Global Attenuation to 0%. This prevents Discord "
                  "from lowering the volume of other applications when "
                  "someone is speaking, which can interfere with Vyber's "
