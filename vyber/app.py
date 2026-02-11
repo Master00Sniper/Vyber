@@ -71,7 +71,12 @@ class VyberApp:
         self.root.title("Vyber")
         w = max(1070, self.config.get("window", "width", default=1070))
         h = max(650, self.config.get("window", "height", default=650))
-        self.root.geometry(f"{w}x{h}")
+        # Center on screen
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
         self.root.minsize(1070, 650)
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")

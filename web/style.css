@@ -126,8 +126,6 @@ nav ul a:hover {
     line-height: 1.7;
 }
 
-/* ===== Under Development Banner ===== */
-
 /* ===== Buttons ===== */
 .btn {
     display: inline-block;
@@ -238,19 +236,19 @@ nav ul a:hover {
     line-height: 1.6;
 }
 
-/* ===== Discord Setup ===== */
-.discord-setup {
+/* ===== Screenshot ===== */
+.screenshot-section {
     padding: 6rem 4rem;
     background: var(--bg-secondary);
     text-align: center;
 }
 
-.discord-setup h2 {
+.screenshot-section h2 {
     font-size: 2.5rem;
     margin-bottom: 1rem;
 }
 
-.discord-setup .section-sub {
+.screenshot-section .section-sub {
     color: var(--text-secondary);
     font-size: 1.05rem;
     margin-bottom: 3rem;
@@ -259,72 +257,16 @@ nav ul a:hover {
     margin-right: auto;
 }
 
-.discord-steps {
-    max-width: 800px;
+.screenshot-wrapper {
+    max-width: 900px;
     margin: 0 auto;
-    text-align: left;
 }
 
-.discord-step {
-    display: flex;
-    gap: 1.25rem;
-    margin-bottom: 2rem;
-    align-items: flex-start;
-}
-
-.discord-step-num {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    background: var(--accent);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1rem;
-}
-
-.discord-step-content h3 {
-    font-size: 1.1rem;
-    margin-bottom: 0.3rem;
-}
-
-.discord-step-content p {
-    color: var(--text-secondary);
-    font-size: 0.93rem;
-    line-height: 1.6;
-}
-
-.discord-step-content code {
-    background: var(--bg-primary);
-    color: var(--accent-hover);
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.88rem;
-    font-weight: 500;
-}
-
-.toggle-list {
-    list-style: none;
-    margin-top: 0.5rem;
-}
-
-.toggle-list li {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.25rem 0;
-    font-size: 0.93rem;
-    color: var(--text-secondary);
-}
-
-.toggle-off {
-    color: var(--accent-hover);
-    font-weight: 700;
-    font-size: 0.8rem;
-    min-width: 28px;
+.app-screenshot {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 /* ===== Getting Started ===== */
@@ -528,7 +470,7 @@ footer {
     }
 
     .features,
-    .discord-setup,
+    .screenshot-section,
     .setup,
     .download {
         padding: 4rem 1.5rem;
@@ -537,11 +479,5 @@ footer {
     .steps {
         flex-direction: column;
         align-items: center;
-    }
-
-    .discord-step {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
     }
 }
