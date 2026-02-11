@@ -186,10 +186,10 @@ class SoundManager:
 
     def set_sound_volume(self, category: str, sound_name: str,
                          volume: float) -> bool:
-        """Set the volume for a sound (0.0 to 1.0)."""
+        """Set the volume for a sound (0.0 to 2.0)."""
         for sound in self.categories.get(category, []):
             if sound.name == sound_name:
-                sound.volume = max(0.0, min(1.0, volume))
+                sound.volume = max(0.0, min(2.0, volume))
                 self.save_to_config()
                 return True
         return False
