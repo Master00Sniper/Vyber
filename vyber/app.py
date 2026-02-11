@@ -509,7 +509,7 @@ class VyberApp:
             self._refresh_tab(target)
 
     def _on_volume_sound(self, category: str, sound_name: str):
-        """Adjust per-sound volume with a slider dialog."""
+        """Adjust per-sound volume with a slider dialog (0–200%)."""
         current = 1.0
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
@@ -520,7 +520,7 @@ class VyberApp:
         dialog.withdraw()
         dialog.configure(bg=_DARK_BG)
         dialog.title(f"Volume — {sound_name}")
-        dialog.geometry("300x160")
+        dialog.geometry("420x160")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
@@ -535,8 +535,8 @@ class VyberApp:
                              font=ctk.CTkFont(size=14))
         label.pack(pady=(0, 0))
 
-        slider = ctk.CTkSlider(outer, from_=0, to=1, number_of_steps=100,
-                                width=250)
+        slider = ctk.CTkSlider(outer, from_=0, to=2, number_of_steps=200,
+                                width=375)
         slider.set(current)
         slider.pack(pady=8)
 
