@@ -178,6 +178,9 @@ class MainWindow:
                          command=self.callbacks.get("on_help"))
         menu.add_command(label="About Vyber",
                          command=self.callbacks.get("on_about"))
+        menu.add_separator()
+        menu.add_command(label="Exit Vyber",
+                         command=self.callbacks.get("on_exit"))
 
         # Position below the menu button
         x = self.menu_button.winfo_rootx()

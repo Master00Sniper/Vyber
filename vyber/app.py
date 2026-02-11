@@ -108,6 +108,7 @@ class VyberApp:
             "on_check_update": self._on_check_update,
             "on_help": self._on_help,
             "on_about": self._on_about,
+            "on_exit": self._full_shutdown,
             "get_categories": self.sound_manager.get_categories,
         })
 
@@ -812,7 +813,6 @@ class VyberApp:
                                            default="stop"),
             on_save=self._apply_settings,
             on_install_vb_cable=self._start_vb_cable_install,
-            on_exit=self._full_shutdown,
             icon_path=str(self._ico_path) if self._ico_path.exists() else None,
         )
 

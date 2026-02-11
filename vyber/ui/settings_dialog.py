@@ -40,14 +40,13 @@ class SettingsDialog(tk.Toplevel):
                  sound_overlap: str = "overlap",
                  on_save: Callable[[dict], None] | None = None,
                  on_install_vb_cable: Callable[[], None] | None = None,
-                 on_exit: Callable[[], None] | None = None,
                  icon_path: str | None = None):
         super().__init__(master)
         self.withdraw()
         self.configure(bg=_DARK_BG)
 
         self.title("Vyber Settings")
-        self.geometry("500x620")
+        self.geometry("500x580")
         self.resizable(False, False)
         self.transient(master)
         self.grab_set()
@@ -61,7 +60,6 @@ class SettingsDialog(tk.Toplevel):
 
         self._on_save = on_save
         self._on_install_vb_cable = on_install_vb_cable
-        self._on_exit = on_exit
         self._output_devices = output_devices
         self._input_devices = input_devices
 
@@ -223,15 +221,9 @@ class SettingsDialog(tk.Toplevel):
             value="stop",
         ).pack(anchor="w", padx=20, pady=2)
 
-        # --- Save / Cancel / Exit buttons ---
+        # --- Save / Cancel buttons ---
         btn_frame = ctk.CTkFrame(self._outer, fg_color="transparent")
         btn_frame.pack(fill="x", padx=15, pady=(8, 12))
-
-        ctk.CTkButton(
-            btn_frame, text="Exit Vyber", width=110,
-            fg_color="#8B0000", hover_color="#B22222",
-            command=self._handle_exit,
-        ).pack(side="left", padx=5)
 
         ctk.CTkButton(
             btn_frame, text="Save", width=100,
@@ -243,12 +235,6 @@ class SettingsDialog(tk.Toplevel):
             fg_color="#37474F", hover_color="#546E7A",
             command=self.destroy
         ).pack(side="right", padx=5)
-
-    def _handle_exit(self):
-        """Fully exit Vyber (not just minimize to tray)."""
-        self.destroy()
-        if self._on_exit:
-            self._on_exit()
 
     def _handle_install_vb_cable(self):
         """Start the VB-CABLE install and close the dialog."""
