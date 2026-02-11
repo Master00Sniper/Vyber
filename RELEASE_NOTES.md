@@ -1,3 +1,5 @@
-# Vyber v0.1.1
+# Vyber v0.1.2
 
-Test release to verify the update process works correctly. No functional changes from v0.1.0.
+## Changes
+
+- **Fix update check** — Update checker no longer silently fails; shows distinct messages for "up to date", "update available", and errors with details

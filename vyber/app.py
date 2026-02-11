@@ -210,14 +210,17 @@ class VyberApp:
     def _check_update_thread(self):
         """Run the update check in a background thread, then prompt on UI thread."""
         result = updater.check_for_updates()
-        if result is None:
-            # Up to date or error — show info on UI thread
+        status = result.get("status")
+        if status == "update":
+            self.root.after(
+                0, lambda: self._show_update_prompt(
+                    result["version"], result["url"])
+            )
+        elif status == "up_to_date":
             self.root.after(0, self._show_up_to_date)
         else:
-            latest_version, download_url = result
-            self.root.after(
-                0, lambda: self._show_update_prompt(latest_version, download_url)
-            )
+            msg = result.get("message", "Unknown error")
+            self.root.after(0, lambda: self._show_update_error(msg))
 
     def _show_up_to_date(self):
         """Show a small dialog telling the user they're up to date."""
@@ -238,6 +241,30 @@ class VyberApp:
             outer, text=f"Vyber is up to date (v{__version__}).",
             font=ctk.CTkFont(size=14, weight="bold"),
         ).pack(pady=(20, 10))
+        ctk.CTkButton(outer, text="OK", width=80, command=dialog.destroy).pack()
+        self._setup_dialog(dialog)
+
+    def _show_update_error(self, message: str):
+        """Show a dialog when the update check fails."""
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Update Check Failed")
+        dialog.geometry("380x130")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+        ctk.CTkLabel(
+            outer, text="Could not check for updates.",
+            font=ctk.CTkFont(size=14, weight="bold"),
+        ).pack(pady=(15, 4))
+        ctk.CTkLabel(
+            outer, text=message,
+            font=ctk.CTkFont(size=12), text_color="gray60",
+        ).pack(pady=(0, 10))
         ctk.CTkButton(outer, text="OK", width=80, command=dialog.destroy).pack()
         self._setup_dialog(dialog)
 

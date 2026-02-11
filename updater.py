@@ -66,30 +66,29 @@ def check_for_updates():
     Check GitHub for a newer release.
 
     Returns:
-        (latest_version, download_url) if an update is available, else None.
+        {"status": "update", "version": str, "url": str} if update available,
+        {"status": "up_to_date"} if already current,
+        {"status": "error", "message": str} on failure.
     """
-    if is_development_mode():
-        logger.info("Development mode — skipping update check")
-        return None
-
     try:
         logger.info("Checking for updates (current: v%s)...", CURRENT_VERSION)
 
         response = requests.get(GITHUB_API_URL, headers=HEADERS, timeout=10)
         if response.status_code != 200:
+            msg = f"Server returned status {response.status_code}"
             logger.error("GitHub API returned status %d", response.status_code)
-            return None
+            return {"status": "error", "message": msg}
 
         release_data = response.json()
         latest_version = release_data.get("tag_name")
 
         if not latest_version:
             logger.error("No version tag found in release")
-            return None
+            return {"status": "error", "message": "No version found in release"}
 
         if compare_versions(latest_version, CURRENT_VERSION) <= 0:
             logger.info("Already up to date (v%s)", CURRENT_VERSION)
-            return None
+            return {"status": "up_to_date"}
 
         logger.info("Update available: %s", latest_version)
 
@@ -100,19 +99,23 @@ def check_for_updates():
         )
         if not asset:
             logger.error("No Vyber.exe found in release assets")
-            return None
+            return {"status": "error", "message": "No Vyber.exe found in release"}
 
-        return latest_version, asset["browser_download_url"]
+        return {"status": "update", "version": latest_version,
+                "url": asset["browser_download_url"]}
 
     except requests.exceptions.ConnectionError as e:
         logger.error("Connection error: %s", e)
+        return {"status": "error", "message": "Connection failed — check your internet"}
     except requests.exceptions.Timeout as e:
         logger.error("Timeout error: %s", e)
+        return {"status": "error", "message": "Request timed out"}
     except requests.RequestException as e:
         logger.error("Network error: %s", e)
+        return {"status": "error", "message": str(e)}
     except Exception as e:
         logger.error("Unexpected error: %s: %s", type(e).__name__, e)
-    return None
+        return {"status": "error", "message": str(e)}
 
 
 # =============================================================================
