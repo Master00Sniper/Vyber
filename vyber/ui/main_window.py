@@ -216,12 +216,11 @@ class MainWindow:
             bg="#2b2b2b", fg="white", activebackground="#404040",
             activeforeground="white"
         )
-        if current == "General":
-            menu.add_command(
-                label="Delete All Sounds",
-                command=lambda: self.callbacks["on_clear_category"](current)
-            )
-        else:
+        menu.add_command(
+            label="Delete All Sounds",
+            command=lambda: self.callbacks["on_clear_category"](current)
+        )
+        if current != "General":
             menu.add_command(
                 label=f"Delete \"{current}\"",
                 command=lambda: self.callbacks["on_remove_category"](current)
