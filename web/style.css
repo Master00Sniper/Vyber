@@ -470,6 +470,47 @@ nav ul a:hover {
     text-decoration: underline;
 }
 
+/* ===== Morton Apps Callout ===== */
+.morton-callout {
+    padding: 3rem 2rem;
+    text-align: center;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border);
+}
+
+.morton-callout p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.morton-callout p strong {
+    color: var(--text-primary);
+}
+
+.morton-link {
+    display: inline-block;
+    color: var(--accent-hover);
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s, text-shadow 0.3s;
+}
+
+.morton-link:hover {
+    color: #ff4040;
+    text-shadow: 0 0 16px var(--accent-glow);
+}
+
+.morton-link .arrow {
+    display: inline-block;
+    transition: transform 0.2s;
+}
+
+.morton-link:hover .arrow {
+    transform: translateX(5px);
+}
+
 /* ===== Footer ===== */
 footer {
     padding: 2rem 4rem;
