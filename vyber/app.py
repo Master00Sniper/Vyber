@@ -3,6 +3,7 @@
 import ctypes
 import logging
 import os
+from pathlib import Path
 import platform
 import sys
 import threading
@@ -42,7 +43,7 @@ from vyber.ui.main_window import MainWindow
 from vyber.ui.settings_dialog import SettingsDialog
 from vyber import vb_cable_installer
 from vyber.tray_manager import TrayManager
-from vyber.telemetry import send_telemetry
+from vyber.telemetry import send_telemetry, send_heartbeat
 import updater
 
 
@@ -104,8 +105,10 @@ class VyberApp:
             "on_open_settings": self._on_open_settings,
             "on_discord_guide": self._on_discord_guide,
             "on_refresh_audio": self._on_refresh_audio,
+            "on_check_update": self._on_check_update,
             "on_help": self._on_help,
             "on_about": self._on_about,
+            "on_exit": self._full_shutdown,
             "get_categories": self.sound_manager.get_categories,
         })
 
@@ -149,14 +152,12 @@ class VyberApp:
         # Start periodic status update
         self._update_status()
 
-        # Background auto-updater
-        self._update_stop = threading.Event()
-        self._update_thread = threading.Thread(
-            target=updater.periodic_update_check,
-            args=(self._update_stop, None),
-            daemon=True,
+        # Heartbeat — send periodic telemetry (no auto-update)
+        self._heartbeat_stop = threading.Event()
+        self._heartbeat_thread = threading.Thread(
+            target=self._heartbeat_loop, daemon=True,
         )
-        self._update_thread.start()
+        self._heartbeat_thread.start()
 
         # Telemetry — record app launch
         send_telemetry("app_start")
@@ -187,9 +188,96 @@ class VyberApp:
         """Quit from the tray menu."""
         self._full_shutdown()
 
+    def _heartbeat_loop(self):
+        """Send periodic heartbeat telemetry."""
+        while not self._heartbeat_stop.is_set():
+            if self._heartbeat_stop.wait(3600):
+                break
+            try:
+                send_heartbeat()
+            except Exception as e:
+                logger.error("Heartbeat error: %s", e)
+
+    def _on_check_update(self):
+        """Manual update check triggered from tray menu."""
+        threading.Thread(target=self._check_update_thread, daemon=True).start()
+
+    def _check_update_thread(self):
+        """Run the update check in a background thread, then prompt on UI thread."""
+        result = updater.check_for_updates()
+        if result is None:
+            # Up to date or error — show info on UI thread
+            self.root.after(0, self._show_up_to_date)
+        else:
+            latest_version, download_url = result
+            self.root.after(
+                0, lambda: self._show_update_prompt(latest_version, download_url)
+            )
+
+    def _show_up_to_date(self):
+        """Show a small dialog telling the user they're up to date."""
+        from vyber import __version__
+
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Check for Updates")
+        dialog.geometry("320x120")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+        ctk.CTkLabel(
+            outer, text=f"Vyber is up to date (v{__version__}).",
+            font=ctk.CTkFont(size=14, weight="bold"),
+        ).pack(pady=(20, 10))
+        ctk.CTkButton(outer, text="OK", width=80, command=dialog.destroy).pack()
+        self._setup_dialog(dialog)
+
+    def _show_update_prompt(self, latest_version, download_url):
+        """Show a dialog asking the user if they want to update."""
+        from vyber import __version__
+
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Update Available")
+        dialog.geometry("380x150")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+        ctk.CTkLabel(
+            outer,
+            text=f"Vyber {latest_version} is available!\n"
+                 f"You are running v{__version__}.",
+            font=ctk.CTkFont(size=13, weight="bold"),
+        ).pack(pady=(18, 12))
+
+        btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
+        btn_frame.pack()
+
+        def on_update():
+            dialog.destroy()
+            threading.Thread(
+                target=updater.download_and_apply,
+                args=(download_url,),
+                daemon=True,
+            ).start()
+
+        ctk.CTkButton(btn_frame, text="Update Now", width=110,
+                       command=on_update).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Later", width=80, fg_color="#444444",
+                       hover_color="#555555", command=dialog.destroy).pack(side="left", padx=5)
+        self._setup_dialog(dialog)
+
     def _full_shutdown(self):
         """Clean shutdown — stop everything and exit."""
-        self._update_stop.set()
+        self._heartbeat_stop.set()
         self.tray.stop()
         self.hotkey_manager.stop()
         self.audio_engine.stop()
@@ -269,7 +357,6 @@ class VyberApp:
             volume = sound.volume
             def _hotkey_play(fp=filepath, v=volume):
                 self.audio_engine.play_sound(fp, v)
-                send_telemetry("hotkey_used")
             mappings[hotkey] = _hotkey_play
 
         stop_key = self.config.get("hotkeys", "stop_all", default="escape")
@@ -304,7 +391,7 @@ class VyberApp:
     def _on_play(self, category: str, sound_name: str):
         """Play a sound by name from a category."""
         overlap = self.config.get("preferences", "sound_overlap",
-                                   default="overlap")
+                                   default="stop")
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
                 if overlap == "stop" and sound.path in self.audio_engine.get_playing_filepaths():
@@ -314,12 +401,20 @@ class VyberApp:
                     logger.info("Playing sound: %s [%s] vol=%.0f%%",
                                 sound_name, category, sound.volume * 100)
                     self.audio_engine.play_sound(sound.path, sound.volume)
-                send_telemetry("sound_played")
                 break
 
     def _on_stop_all(self):
         logger.info("Stop all sounds")
         self.audio_engine.stop_all()
+
+    @staticmethod
+    def _default_sound_dir() -> str:
+        """Return the best default directory for file dialogs (Music > Documents > Home)."""
+        home = Path.home()
+        for folder in (home / "Music", home / "Documents", home):
+            if folder.is_dir():
+                return str(folder)
+        return str(home)
 
     def _on_add_sound(self, category: str):
         """Open file dialog to add a sound."""
@@ -330,6 +425,7 @@ class VyberApp:
         paths = filedialog.askopenfilenames(
             title="Add Sounds",
             filetypes=filetypes,
+            initialdir=self._default_sound_dir(),
             parent=self.root
         )
         for path in paths:
@@ -343,6 +439,7 @@ class VyberApp:
         """Open folder dialog to add all sounds in a directory."""
         folder = filedialog.askdirectory(
             title="Add Folder of Sounds",
+            initialdir=self._default_sound_dir(),
             parent=self.root
         )
         if folder:
@@ -458,46 +555,126 @@ class VyberApp:
         self._refresh_tab(category)
 
     def _on_set_hotkey(self, category: str, sound_name: str):
-        """Set a hotkey for a sound via input dialog."""
+        """Set a hotkey for a sound via a themed key-capture dialog."""
+        import keyboard as kb
+
         current = None
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
                 current = sound.hotkey
                 break
 
-        prompt = f"Hotkey for '{sound_name}'"
-        if current:
-            prompt += f" (current: {current})"
-        prompt += ":\n\nExamples: ctrl+1, f5, shift+a\nLeave empty to clear."
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Set Hotkey")
+        dialog.geometry("340x200")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
 
-        hotkey = simpledialog.askstring("Set Hotkey", prompt, parent=self.root)
-        if hotkey is not None:  # None means cancelled
-            hotkey = hotkey.strip() or None
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        ctk.CTkLabel(
+            outer, text=f"Hotkey for \"{sound_name}\"",
+            font=ctk.CTkFont(size=13, weight="bold"),
+        ).pack(pady=(15, 2))
+
+        if current:
+            ctk.CTkLabel(
+                outer, text=f"Current: {current}",
+                font=ctk.CTkFont(size=12), text_color="gray60",
+            ).pack(pady=(0, 4))
+
+        ctk.CTkLabel(
+            outer, text="Press a key combination...",
+            font=ctk.CTkFont(size=12), text_color="gray60",
+        ).pack(pady=(4, 4))
+
+        captured = {"hotkey": None}
+        key_label = ctk.CTkLabel(
+            outer, text="Waiting...",
+            font=ctk.CTkFont(size=16, weight="bold"), text_color="#4fc3f7",
+        )
+        key_label.pack(pady=(4, 8))
+
+        def on_key_event(event):
+            if event.event_type != kb.KEY_DOWN:
+                return
+            # Build the full combo from currently pressed keys
+            modifiers = []
+            for mod in ("ctrl", "shift", "alt"):
+                if getattr(event, "modifiers", None) is not None:
+                    pass  # not available on all platforms
+                # Use keyboard.is_pressed for reliable modifier detection
+                try:
+                    if kb.is_pressed(mod):
+                        modifiers.append(mod)
+                except Exception:
+                    pass
+            key_name = event.name
+            # Don't capture bare modifier presses — wait for a real key
+            if key_name in ("ctrl", "left ctrl", "right ctrl",
+                            "shift", "left shift", "right shift",
+                            "alt", "left alt", "right alt"):
+                combo = "+".join(modifiers) + "+..." if modifiers else "..."
+                dialog.after(0, lambda t=combo: key_label.configure(text=t))
+                return
+            # Remove duplicate if the key itself is a modifier name
+            parts = modifiers + [key_name]
+            combo = "+".join(parts)
+            captured["hotkey"] = combo
+            dialog.after(0, lambda t=combo: key_label.configure(text=t))
+
+        hook = kb.hook(on_key_event, suppress=False)
+
+        def on_save():
+            kb.unhook(hook)
+            hotkey = captured["hotkey"]
+            if hotkey:
+                hotkey = hotkey.strip() or None
             self.sound_manager.set_hotkey(category, sound_name, hotkey)
             self._refresh_tab(category)
             self._register_hotkeys()
+            dialog.destroy()
 
-    def _on_move_sound(self, category: str, sound_name: str):
-        """Move a sound to another category."""
-        categories = [c for c in self.sound_manager.get_categories()
-                      if c != category]
-        if not categories:
-            return
-
-        # Simple dialog to pick target category
-        target = simpledialog.askstring(
-            "Move Sound",
-            f"Move '{sound_name}' to which category?\n\n"
-            f"Available: {', '.join(categories)}",
-            parent=self.root
-        )
-        if target and target in self.sound_manager.categories:
-            self.sound_manager.move_sound(category, target, sound_name)
+        def on_clear():
+            kb.unhook(hook)
+            self.sound_manager.set_hotkey(category, sound_name, None)
             self._refresh_tab(category)
-            self._refresh_tab(target)
+            self._register_hotkeys()
+            dialog.destroy()
+
+        def on_cancel():
+            kb.unhook(hook)
+            dialog.destroy()
+
+        btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
+        btn_frame.pack(pady=(0, 10))
+        ctk.CTkButton(btn_frame, text="Save", width=80,
+                       command=on_save).pack(side="left", padx=4)
+        ctk.CTkButton(btn_frame, text="Clear", width=80, fg_color="#8B4513",
+                       hover_color="#A0522D", command=on_clear).pack(side="left", padx=4)
+        ctk.CTkButton(btn_frame, text="Cancel", width=80, fg_color="#444444",
+                       hover_color="#555555", command=on_cancel).pack(side="left", padx=4)
+
+        dialog.protocol("WM_DELETE_WINDOW", on_cancel)
+        self._setup_dialog(dialog)
+
+    def _on_move_sound(self, category: str, sound_name: str,
+                       target: str | None = None):
+        """Move a sound to another category."""
+        if not target:
+            return
+        if target not in self.sound_manager.categories:
+            return
+        self.sound_manager.move_sound(category, target, sound_name)
+        self._refresh_tab(category)
+        self._refresh_tab(target)
 
     def _on_volume_sound(self, category: str, sound_name: str):
-        """Adjust per-sound volume with a slider dialog."""
+        """Adjust per-sound volume with a slider dialog (0–200%)."""
         current = 1.0
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
@@ -508,7 +685,7 @@ class VyberApp:
         dialog.withdraw()
         dialog.configure(bg=_DARK_BG)
         dialog.title(f"Volume — {sound_name}")
-        dialog.geometry("300x160")
+        dialog.geometry("420x160")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
@@ -523,8 +700,8 @@ class VyberApp:
                              font=ctk.CTkFont(size=14))
         label.pack(pady=(0, 0))
 
-        slider = ctk.CTkSlider(outer, from_=0, to=1, number_of_steps=100,
-                                width=250)
+        slider = ctk.CTkSlider(outer, from_=0, to=2, number_of_steps=200,
+                                width=375)
         slider.set(current)
         slider.pack(pady=8)
 
@@ -555,13 +732,45 @@ class VyberApp:
         self.config.set("audio", "output_mode", mode)
 
     def _on_add_category(self):
-        """Add a new category."""
-        name = simpledialog.askstring("New Category", "Category name:",
-                                      parent=self.root)
-        if name and name.strip():
-            if self.sound_manager.add_category(name.strip()):
-                logger.info("Added category: %s", name.strip())
-                self._refresh_all_tabs()
+        """Add a new category via a themed dialog."""
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("New Category")
+        dialog.geometry("320x140")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        ctk.CTkLabel(outer, text="Category name:",
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(15, 5))
+
+        entry = ctk.CTkEntry(outer, width=250, placeholder_text="e.g. Memes")
+        entry.pack(pady=(0, 10))
+
+        def on_ok(_event=None):
+            name = entry.get().strip()
+            if name:
+                if self.sound_manager.add_category(name):
+                    logger.info("Added category: %s", name)
+                    self._refresh_all_tabs()
+            dialog.destroy()
+
+        btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
+        btn_frame.pack(pady=(0, 10))
+
+        ctk.CTkButton(btn_frame, text="OK", width=80,
+                       command=on_ok).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Cancel", width=80,
+                       fg_color="#444444", hover_color="#555555",
+                       command=dialog.destroy).pack(side="left", padx=5)
+
+        entry.bind("<Return>", on_ok)
+        self._setup_dialog(dialog)
+        entry.focus_set()
 
     def _on_remove_category(self, name: str):
         """Remove a category."""
@@ -601,7 +810,7 @@ class VyberApp:
                                                  default="escape"),
             mic_passthrough=self.audio_engine.mic_passthrough,
             sound_overlap=self.config.get("preferences", "sound_overlap",
-                                           default="overlap"),
+                                           default="stop"),
             on_save=self._apply_settings,
             on_install_vb_cable=self._start_vb_cable_install,
             icon_path=str(self._ico_path) if self._ico_path.exists() else None,
@@ -637,29 +846,35 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="Step 1 — Set Your Input Device",
                      font=bold).pack(anchor="w", pady=(8, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="In Discord, go to Settings > Voice & Video.\n\n"
                  "Under INPUT DEVICE, select:\n"
                  "    CABLE Output (VB-Audio Virtual Cable)\n\n"
                  "This tells Discord to listen to VB-CABLE, which is "
-                 "where Vyber sends its audio."
+                 "where Vyber sends its audio.\n\n"
+                 "Note: Discord won't pick up any audio when Vyber "
+                 "isn't running, since VB-CABLE is a virtual device "
+                 "that only carries audio from Vyber."
         ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
 
         # --- Step 2 ---
-        ctk.CTkLabel(scroll, text="Step 2 — Use Push to Talk or Voice Activity",
+        ctk.CTkLabel(scroll, text="Step 2 — Input Sensitivity",
                      font=bold).pack(anchor="w", pady=(12, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
-            text="If using Voice Activity, set the sensitivity slider manually "
-                 "rather than relying on automatic detection, since VB-CABLE "
-                 "audio levels differ from a real microphone."
+            scroll, font=body, wraplength=440, justify="left",
+            text="Uncheck \"Automatically determine input sensitivity\" "
+                 "and manually set the sensitivity slider as low as your "
+                 "quietest sound clip. This prevents Discord from cutting "
+                 "off quieter sounds.\n\n"
+                 "Tip: You can also right-click any sound in Vyber and "
+                 "adjust its volume up to 200% if it's too quiet."
         ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
 
         # --- Step 3 ---
         ctk.CTkLabel(scroll, text="Step 3 — Disable Audio Processing",
                      font=bold).pack(anchor="w", pady=(12, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="Discord's audio processing is designed for real "
                  "microphones and will distort soundboard audio. "
                  "Scroll down to the Voice Processing section and "
@@ -683,7 +898,7 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="Step 4 — Advanced Voice Settings",
                      font=bold).pack(anchor="w", pady=(14, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="Expand \"Advanced Voice Settings\" at the bottom of "
                  "the Voice & Video page and also disable:"
         ).pack(anchor="w", padx=(10, 0), pady=(0, 6))
@@ -705,7 +920,7 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="Step 5 — Global Attenuation",
                      font=bold).pack(anchor="w", pady=(14, 2))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=470, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="Set Global Attenuation to 0%. This prevents Discord "
                  "from lowering the volume of other applications when "
                  "someone is speaking, which can interfere with Vyber's "
@@ -738,7 +953,7 @@ class VyberApp:
         dialog.withdraw()
         dialog.configure(bg=_DARK_BG)
         dialog.title("Help — Report a Bug")
-        dialog.geometry("540x620")
+        dialog.geometry("580x620")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
@@ -767,7 +982,7 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="How Vyber Works",
                      font=bold).pack(anchor="center", pady=(8, 4))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=480, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="Vyber is a soundboard that plays audio through your speakers "
                  "and into voice chat at the same time. It uses VB-CABLE to "
                  "route audio into a virtual microphone that Discord (or any "
@@ -784,7 +999,7 @@ class VyberApp:
         ctk.CTkLabel(scroll, text="Troubleshooting",
                      font=bold).pack(anchor="center", pady=(8, 4))
         ctk.CTkLabel(
-            scroll, font=body, wraplength=480, justify="left",
+            scroll, font=body, wraplength=440, justify="left",
             text="If Vyber isn't working as expected:\n\n"
                  "  \u2022  Make sure VB-CABLE is installed (restart PC after install)\n"
                  "  \u2022  Set Discord's Input Device to \"CABLE Output\"\n"
@@ -1170,12 +1385,12 @@ class VyberApp:
         )
 
     def _on_install_finished(self):
-        """Called when the VB-CABLE installer has been launched."""
+        """Called when the VB-CABLE installer has finished."""
         self._install_pending = False
         messagebox.showinfo(
             "Restart Required",
-            "VB-CABLE has been installed.\n\n"
-            "Please restart your computer to finish the installation.",
+            "The VB-CABLE installer has finished.\n\n"
+            "Please restart your computer to complete the setup.",
             parent=self.root,
         )
         # Re-scan immediately in case the driver is already active

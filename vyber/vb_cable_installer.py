@@ -90,16 +90,43 @@ def _install_worker(on_progress, on_success, on_error):
                 "Launching installer — please approve the admin prompt..."
             )
 
-        # ShellExecute with "runas" requests admin elevation on Windows.
-        # subprocess is used as a fallback for non-Windows (though VB-CABLE
-        # is Windows-only, this keeps the code from crashing during dev).
+        # ShellExecuteExW with "runas" requests admin elevation and returns
+        # a process handle so we can wait for the installer to finish.
         if sys.platform == "win32":
             import ctypes
-            ret = ctypes.windll.shell32.ShellExecuteW(
-                None, "runas", installer_path, None, tmp_dir, 1  # SW_SHOWNORMAL
-            )
-            # ShellExecuteW returns >32 on success
-            if ret <= 32:
+            import ctypes.wintypes
+
+            class SHELLEXECUTEINFO(ctypes.Structure):
+                _fields_ = [
+                    ("cbSize", ctypes.wintypes.DWORD),
+                    ("fMask", ctypes.c_ulong),
+                    ("hwnd", ctypes.wintypes.HANDLE),
+                    ("lpVerb", ctypes.c_wchar_p),
+                    ("lpFile", ctypes.c_wchar_p),
+                    ("lpParameters", ctypes.c_wchar_p),
+                    ("lpDirectory", ctypes.c_wchar_p),
+                    ("nShow", ctypes.c_int),
+                    ("hInstApp", ctypes.wintypes.HINSTANCE),
+                    ("lpIDList", ctypes.c_void_p),
+                    ("lpClass", ctypes.c_wchar_p),
+                    ("hkeyClass", ctypes.wintypes.HKEY),
+                    ("dwHotKey", ctypes.wintypes.DWORD),
+                    ("hIconOrMonitor", ctypes.wintypes.HANDLE),
+                    ("hProcess", ctypes.wintypes.HANDLE),
+                ]
+
+            SEE_MASK_NOCLOSEPROCESS = 0x00000040
+            INFINITE = 0xFFFFFFFF
+
+            sei = SHELLEXECUTEINFO()
+            sei.cbSize = ctypes.sizeof(sei)
+            sei.fMask = SEE_MASK_NOCLOSEPROCESS
+            sei.lpVerb = "runas"
+            sei.lpFile = installer_path
+            sei.lpDirectory = tmp_dir
+            sei.nShow = 1  # SW_SHOWNORMAL
+
+            if not ctypes.windll.shell32.ShellExecuteExW(ctypes.byref(sei)):
                 if on_error:
                     on_error(
                         "Installer could not be launched. "
@@ -107,14 +134,27 @@ def _install_worker(on_progress, on_success, on_error):
                         f"{installer_path}"
                     )
                 return
-        else:
-            subprocess.Popen([installer_path], cwd=tmp_dir)
 
-        if on_progress:
-            on_progress(
-                "VB-CABLE installer is running. "
-                "Click OK in the installer, then restart Vyber."
-            )
+            if on_progress:
+                on_progress(
+                    "VB-CABLE installer is running. "
+                    "Click 'Install Driver' in the installer window..."
+                )
+
+            # Wait for the user to finish the VB-CABLE installer
+            if sei.hProcess:
+                ctypes.windll.kernel32.WaitForSingleObject(
+                    sei.hProcess, INFINITE
+                )
+                ctypes.windll.kernel32.CloseHandle(sei.hProcess)
+        else:
+            proc = subprocess.Popen([installer_path], cwd=tmp_dir)
+            if on_progress:
+                on_progress(
+                    "VB-CABLE installer is running. "
+                    "Click 'Install Driver' in the installer window..."
+                )
+            proc.wait()
 
         if on_success:
             on_success()

@@ -369,7 +369,7 @@ class SoundGrid(ctk.CTkScrollableFrame):
                 if cat != self.category:
                     move_menu.add_command(
                         label=cat,
-                        command=lambda c=cat: self._on_move(self.category, sound_name)
+                        command=lambda c=cat: self._on_move(self.category, sound_name, c)
                         if self._on_move else None
                     )
             if move_menu.index("end") is not None:

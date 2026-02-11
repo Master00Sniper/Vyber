@@ -171,11 +171,16 @@ class MainWindow:
                          command=self.callbacks.get("on_discord_guide"))
         menu.add_command(label="Refresh Audio Devices",
                          command=self.callbacks.get("on_refresh_audio"))
+        menu.add_command(label="Check for Updates",
+                         command=self.callbacks.get("on_check_update"))
         menu.add_separator()
         menu.add_command(label="Help / Report a Bug",
                          command=self.callbacks.get("on_help"))
         menu.add_command(label="About Vyber",
                          command=self.callbacks.get("on_about"))
+        menu.add_separator()
+        menu.add_command(label="Exit Vyber",
+                         command=self.callbacks.get("on_exit"))
 
         # Position below the menu button
         x = self.menu_button.winfo_rootx()
@@ -207,24 +212,40 @@ class MainWindow:
             pass
 
     def _tab_context_menu(self, event):
-        """Show right-click menu on the current tab."""
-        current = self.tabview.get()
-        if not current:
+        """Show right-click menu on the right-clicked tab."""
+        # Determine which tab was right-clicked by matching the event widget
+        # to the segmented button's internal button widgets (widget paths
+        # are hierarchical, so a child's path starts with its parent's path).
+        clicked_tab = None
+        try:
+            seg_button = self.tabview._segmented_button
+            ev_path = str(event.widget)
+            for name, btn in seg_button._buttons_dict.items():
+                btn_path = str(btn)
+                if ev_path == btn_path or ev_path.startswith(btn_path + "."):
+                    clicked_tab = name
+                    break
+        except (AttributeError, Exception):
+            pass
+
+        if not clicked_tab:
+            clicked_tab = self.tabview.get()
+        if not clicked_tab:
             return
+
         menu = Menu(self.root, tearoff=0)
         menu.configure(
             bg="#2b2b2b", fg="white", activebackground="#404040",
             activeforeground="white"
         )
-        if current == "General":
+        menu.add_command(
+            label="Delete All Sounds",
+            command=lambda: self.callbacks["on_clear_category"](clicked_tab)
+        )
+        if clicked_tab != "General":
             menu.add_command(
-                label="Delete All Sounds",
-                command=lambda: self.callbacks["on_clear_category"](current)
-            )
-        else:
-            menu.add_command(
-                label=f"Delete \"{current}\"",
-                command=lambda: self.callbacks["on_remove_category"](current)
+                label=f"Delete \"{clicked_tab}\"",
+                command=lambda: self.callbacks["on_remove_category"](clicked_tab)
             )
         menu.tk_popup(event.x_root, event.y_root)
 
