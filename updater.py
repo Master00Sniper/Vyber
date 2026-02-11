@@ -1,5 +1,5 @@
 # updater.py
-# Handles automatic updates for Vyber via GitHub releases.
+# Handles manual updates for Vyber via GitHub releases.
 
 import logging
 import os
@@ -11,7 +11,6 @@ import sys
 import requests
 
 from vyber import __version__ as CURRENT_VERSION
-from vyber.telemetry import send_heartbeat
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +29,6 @@ HEADERS = {
     "User-Agent": "Vyber-Updater/1.0",
     "X-Vyber-Auth": AUTH_KEY,
 }
-
-# Tracks downloaded update waiting to be applied
-pending_update_path = None
 
 
 # =============================================================================
@@ -62,21 +58,19 @@ def compare_versions(version1, version2):
 
 
 # =============================================================================
-# Update Check & Download
+# Update Check
 # =============================================================================
 
-def check_for_updates(show_notification_func=None):
+def check_for_updates():
     """
-    Check GitHub for new releases and download if available.
+    Check GitHub for a newer release.
 
-    Args:
-        show_notification_func: Callback to display user notifications.
+    Returns:
+        (latest_version, download_url) if an update is available, else None.
     """
-    global pending_update_path
-
     if is_development_mode():
         logger.info("Development mode — skipping update check")
-        return
+        return None
 
     try:
         logger.info("Checking for updates (current: v%s)...", CURRENT_VERSION)
@@ -84,18 +78,18 @@ def check_for_updates(show_notification_func=None):
         response = requests.get(GITHUB_API_URL, headers=HEADERS, timeout=10)
         if response.status_code != 200:
             logger.error("GitHub API returned status %d", response.status_code)
-            return
+            return None
 
         release_data = response.json()
         latest_version = release_data.get("tag_name")
 
         if not latest_version:
             logger.error("No version tag found in release")
-            return
+            return None
 
         if compare_versions(latest_version, CURRENT_VERSION) <= 0:
             logger.info("Already up to date (v%s)", CURRENT_VERSION)
-            return
+            return None
 
         logger.info("Update available: %s", latest_version)
 
@@ -106,16 +100,37 @@ def check_for_updates(show_notification_func=None):
         )
         if not asset:
             logger.error("No Vyber.exe found in release assets")
-            return
+            return None
 
-        download_url = asset["browser_download_url"]
+        return latest_version, asset["browser_download_url"]
 
-        # Download the update
+    except requests.exceptions.ConnectionError as e:
+        logger.error("Connection error: %s", e)
+    except requests.exceptions.Timeout as e:
+        logger.error("Timeout error: %s", e)
+    except requests.RequestException as e:
+        logger.error("Network error: %s", e)
+    except Exception as e:
+        logger.error("Unexpected error: %s: %s", type(e).__name__, e)
+    return None
+
+
+# =============================================================================
+# Download & Apply Update
+# =============================================================================
+
+def download_and_apply(download_url, show_notification_func=None):
+    """
+    Download the new exe and apply the update (restarts Vyber).
+
+    Args:
+        download_url: Direct URL to the new Vyber.exe asset.
+        show_notification_func: Optional callback for status messages.
+    """
+    try:
         logger.info("Starting download...")
         if show_notification_func:
-            show_notification_func(
-                f"Downloading Vyber {latest_version}..."
-            )
+            show_notification_func("Downloading update...")
 
         download_response = requests.get(
             download_url, headers=HEADERS, stream=True, timeout=60
@@ -136,41 +151,21 @@ def check_for_updates(show_notification_func=None):
             return
 
         logger.info("Download complete: %.2f MB", total_size / 1024 / 1024)
-        pending_update_path = temp_exe_path
 
-        logger.info("Applying update...")
-        apply_pending_update(show_notification_func)
+        if show_notification_func:
+            show_notification_func("Vyber will restart in a few seconds...")
+
+        time.sleep(3)
+        perform_update(temp_exe_path)
 
     except requests.exceptions.ConnectionError as e:
-        logger.error("Connection error: %s", e)
+        logger.error("Connection error during download: %s", e)
     except requests.exceptions.Timeout as e:
-        logger.error("Timeout error: %s", e)
+        logger.error("Timeout during download: %s", e)
     except requests.RequestException as e:
-        logger.error("Network error: %s", e)
+        logger.error("Network error during download: %s", e)
     except Exception as e:
-        logger.error("Unexpected error: %s: %s", type(e).__name__, e)
-
-
-# =============================================================================
-# Update Application
-# =============================================================================
-
-def apply_pending_update(show_notification_func=None):
-    """Apply a previously downloaded update — restart Vyber with the new exe."""
-    global pending_update_path
-
-    if not pending_update_path or not os.path.exists(pending_update_path):
-        pending_update_path = None
-        return
-
-    logger.info("Applying pending update from: %s", pending_update_path)
-
-    if show_notification_func:
-        show_notification_func("Vyber will restart in a few seconds...")
-
-    time.sleep(3)
-    perform_update(pending_update_path)
-    pending_update_path = None
+        logger.error("Unexpected error during download: %s: %s", type(e).__name__, e)
 
 
 def perform_update(new_exe_path):
@@ -267,37 +262,3 @@ Set WshShell = Nothing
 
     except Exception as e:
         logger.error("Update execution failed: %s", e)
-
-
-# =============================================================================
-# Background Update Checker
-# =============================================================================
-
-def periodic_update_check(stop_event, show_notification_func=None, check_interval=3600):
-    """
-    Background thread that periodically checks for updates.
-
-    Args:
-        stop_event: Threading event to signal shutdown.
-        show_notification_func: Callback to display user notifications.
-        check_interval: Seconds between checks (default: 1 hour).
-    """
-    logger.info(
-        "Update checker starting (first check in %d minutes)...",
-        check_interval // 60,
-    )
-
-    check_count = 0
-    while not stop_event.is_set():
-        if stop_event.wait(check_interval):
-            break
-
-        try:
-            check_count += 1
-            logger.info("Periodic update check #%d", check_count)
-            check_for_updates(show_notification_func)
-            send_heartbeat()
-        except Exception as e:
-            logger.error("Error in periodic check: %s", e)
-
-    logger.info("Update checker stopped")

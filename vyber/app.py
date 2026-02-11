@@ -43,7 +43,7 @@ from vyber.ui.main_window import MainWindow
 from vyber.ui.settings_dialog import SettingsDialog
 from vyber import vb_cable_installer
 from vyber.tray_manager import TrayManager
-from vyber.telemetry import send_telemetry
+from vyber.telemetry import send_telemetry, send_heartbeat
 import updater
 
 
@@ -139,6 +139,7 @@ class VyberApp:
             icon_path=str(tray_icon_path),
             on_show=lambda: self.root.after(0, self._show_from_tray),
             on_quit=lambda: self.root.after(0, self._quit_from_tray),
+            on_check_update=lambda: self.root.after(0, self._on_check_update),
         )
         if self.tray.available:
             self.tray.start()
@@ -150,14 +151,12 @@ class VyberApp:
         # Start periodic status update
         self._update_status()
 
-        # Background auto-updater
-        self._update_stop = threading.Event()
-        self._update_thread = threading.Thread(
-            target=updater.periodic_update_check,
-            args=(self._update_stop, None),
-            daemon=True,
+        # Heartbeat — send periodic telemetry (no auto-update)
+        self._heartbeat_stop = threading.Event()
+        self._heartbeat_thread = threading.Thread(
+            target=self._heartbeat_loop, daemon=True,
         )
-        self._update_thread.start()
+        self._heartbeat_thread.start()
 
         # Telemetry — record app launch
         send_telemetry("app_start")
@@ -188,9 +187,96 @@ class VyberApp:
         """Quit from the tray menu."""
         self._full_shutdown()
 
+    def _heartbeat_loop(self):
+        """Send periodic heartbeat telemetry."""
+        while not self._heartbeat_stop.is_set():
+            if self._heartbeat_stop.wait(3600):
+                break
+            try:
+                send_heartbeat()
+            except Exception as e:
+                logger.error("Heartbeat error: %s", e)
+
+    def _on_check_update(self):
+        """Manual update check triggered from tray menu."""
+        threading.Thread(target=self._check_update_thread, daemon=True).start()
+
+    def _check_update_thread(self):
+        """Run the update check in a background thread, then prompt on UI thread."""
+        result = updater.check_for_updates()
+        if result is None:
+            # Up to date or error — show info on UI thread
+            self.root.after(0, self._show_up_to_date)
+        else:
+            latest_version, download_url = result
+            self.root.after(
+                0, lambda: self._show_update_prompt(latest_version, download_url)
+            )
+
+    def _show_up_to_date(self):
+        """Show a small dialog telling the user they're up to date."""
+        from vyber import __version__
+
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Check for Updates")
+        dialog.geometry("320x120")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+        ctk.CTkLabel(
+            outer, text=f"Vyber is up to date (v{__version__}).",
+            font=ctk.CTkFont(size=14, weight="bold"),
+        ).pack(pady=(20, 10))
+        ctk.CTkButton(outer, text="OK", width=80, command=dialog.destroy).pack()
+        self._setup_dialog(dialog)
+
+    def _show_update_prompt(self, latest_version, download_url):
+        """Show a dialog asking the user if they want to update."""
+        from vyber import __version__
+
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Update Available")
+        dialog.geometry("380x150")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+        ctk.CTkLabel(
+            outer,
+            text=f"Vyber {latest_version} is available!\n"
+                 f"You are running v{__version__}.",
+            font=ctk.CTkFont(size=13, weight="bold"),
+        ).pack(pady=(18, 12))
+
+        btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
+        btn_frame.pack()
+
+        def on_update():
+            dialog.destroy()
+            threading.Thread(
+                target=updater.download_and_apply,
+                args=(download_url,),
+                daemon=True,
+            ).start()
+
+        ctk.CTkButton(btn_frame, text="Update Now", width=110,
+                       command=on_update).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Later", width=80, fg_color="#444444",
+                       hover_color="#555555", command=dialog.destroy).pack(side="left", padx=5)
+        self._setup_dialog(dialog)
+
     def _full_shutdown(self):
         """Clean shutdown — stop everything and exit."""
-        self._update_stop.set()
+        self._heartbeat_stop.set()
         self.tray.stop()
         self.hotkey_manager.stop()
         self.audio_engine.stop()
