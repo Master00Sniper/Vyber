@@ -554,24 +554,112 @@ class VyberApp:
         self._refresh_tab(category)
 
     def _on_set_hotkey(self, category: str, sound_name: str):
-        """Set a hotkey for a sound via input dialog."""
+        """Set a hotkey for a sound via a themed key-capture dialog."""
+        import keyboard as kb
+
         current = None
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
                 current = sound.hotkey
                 break
 
-        prompt = f"Hotkey for '{sound_name}'"
-        if current:
-            prompt += f" (current: {current})"
-        prompt += ":\n\nExamples: ctrl+1, f5, shift+a\nLeave empty to clear."
+        dialog = tk.Toplevel(self.root)
+        dialog.withdraw()
+        dialog.configure(bg=_DARK_BG)
+        dialog.title("Set Hotkey")
+        dialog.geometry("340x200")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
 
-        hotkey = simpledialog.askstring("Set Hotkey", prompt, parent=self.root)
-        if hotkey is not None:  # None means cancelled
-            hotkey = hotkey.strip() or None
+        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
+        outer.pack(fill="both", expand=True)
+
+        ctk.CTkLabel(
+            outer, text=f"Hotkey for \"{sound_name}\"",
+            font=ctk.CTkFont(size=13, weight="bold"),
+        ).pack(pady=(15, 2))
+
+        if current:
+            ctk.CTkLabel(
+                outer, text=f"Current: {current}",
+                font=ctk.CTkFont(size=12), text_color="gray60",
+            ).pack(pady=(0, 4))
+
+        ctk.CTkLabel(
+            outer, text="Press a key combination...",
+            font=ctk.CTkFont(size=12), text_color="gray60",
+        ).pack(pady=(4, 4))
+
+        captured = {"hotkey": None}
+        key_label = ctk.CTkLabel(
+            outer, text="Waiting...",
+            font=ctk.CTkFont(size=16, weight="bold"), text_color="#4fc3f7",
+        )
+        key_label.pack(pady=(4, 8))
+
+        def on_key_event(event):
+            if event.event_type != kb.KEY_DOWN:
+                return
+            # Build the full combo from currently pressed keys
+            modifiers = []
+            for mod in ("ctrl", "shift", "alt"):
+                if getattr(event, "modifiers", None) is not None:
+                    pass  # not available on all platforms
+                # Use keyboard.is_pressed for reliable modifier detection
+                try:
+                    if kb.is_pressed(mod):
+                        modifiers.append(mod)
+                except Exception:
+                    pass
+            key_name = event.name
+            # Don't capture bare modifier presses — wait for a real key
+            if key_name in ("ctrl", "left ctrl", "right ctrl",
+                            "shift", "left shift", "right shift",
+                            "alt", "left alt", "right alt"):
+                combo = "+".join(modifiers) + "+..." if modifiers else "..."
+                dialog.after(0, lambda t=combo: key_label.configure(text=t))
+                return
+            # Remove duplicate if the key itself is a modifier name
+            parts = modifiers + [key_name]
+            combo = "+".join(parts)
+            captured["hotkey"] = combo
+            dialog.after(0, lambda t=combo: key_label.configure(text=t))
+
+        hook = kb.hook(on_key_event, suppress=False)
+
+        def on_save():
+            kb.unhook(hook)
+            hotkey = captured["hotkey"]
+            if hotkey:
+                hotkey = hotkey.strip() or None
             self.sound_manager.set_hotkey(category, sound_name, hotkey)
             self._refresh_tab(category)
             self._register_hotkeys()
+            dialog.destroy()
+
+        def on_clear():
+            kb.unhook(hook)
+            self.sound_manager.set_hotkey(category, sound_name, None)
+            self._refresh_tab(category)
+            self._register_hotkeys()
+            dialog.destroy()
+
+        def on_cancel():
+            kb.unhook(hook)
+            dialog.destroy()
+
+        btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
+        btn_frame.pack(pady=(0, 10))
+        ctk.CTkButton(btn_frame, text="Save", width=80,
+                       command=on_save).pack(side="left", padx=4)
+        ctk.CTkButton(btn_frame, text="Clear", width=80, fg_color="#8B4513",
+                       hover_color="#A0522D", command=on_clear).pack(side="left", padx=4)
+        ctk.CTkButton(btn_frame, text="Cancel", width=80, fg_color="#444444",
+                       hover_color="#555555", command=on_cancel).pack(side="left", padx=4)
+
+        dialog.protocol("WM_DELETE_WINDOW", on_cancel)
+        self._setup_dialog(dialog)
 
     def _on_move_sound(self, category: str, sound_name: str,
                        target: str | None = None):
