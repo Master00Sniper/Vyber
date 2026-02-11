@@ -3,7 +3,7 @@
 import os as _os
 from pathlib import Path as _Path
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 # Project root (parent of the vyber package directory)
 ROOT_DIR = _Path(_os.path.dirname(_os.path.abspath(__file__))).parent
