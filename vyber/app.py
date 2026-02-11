@@ -305,7 +305,7 @@ class VyberApp:
     def _on_play(self, category: str, sound_name: str):
         """Play a sound by name from a category."""
         overlap = self.config.get("preferences", "sound_overlap",
-                                   default="overlap")
+                                   default="stop")
         for sound in self.sound_manager.get_sounds(category):
             if sound.name == sound_name:
                 if overlap == "stop" and sound.path in self.audio_engine.get_playing_filepaths():
@@ -489,24 +489,16 @@ class VyberApp:
             self._refresh_tab(category)
             self._register_hotkeys()
 
-    def _on_move_sound(self, category: str, sound_name: str):
+    def _on_move_sound(self, category: str, sound_name: str,
+                       target: str | None = None):
         """Move a sound to another category."""
-        categories = [c for c in self.sound_manager.get_categories()
-                      if c != category]
-        if not categories:
+        if not target:
             return
-
-        # Simple dialog to pick target category
-        target = simpledialog.askstring(
-            "Move Sound",
-            f"Move '{sound_name}' to which category?\n\n"
-            f"Available: {', '.join(categories)}",
-            parent=self.root
-        )
-        if target and target in self.sound_manager.categories:
-            self.sound_manager.move_sound(category, target, sound_name)
-            self._refresh_tab(category)
-            self._refresh_tab(target)
+        if target not in self.sound_manager.categories:
+            return
+        self.sound_manager.move_sound(category, target, sound_name)
+        self._refresh_tab(category)
+        self._refresh_tab(target)
 
     def _on_volume_sound(self, category: str, sound_name: str):
         """Adjust per-sound volume with a slider dialog (0–200%)."""
@@ -613,7 +605,7 @@ class VyberApp:
                                                  default="escape"),
             mic_passthrough=self.audio_engine.mic_passthrough,
             sound_overlap=self.config.get("preferences", "sound_overlap",
-                                           default="overlap"),
+                                           default="stop"),
             on_save=self._apply_settings,
             on_install_vb_cable=self._start_vb_cable_install,
             icon_path=str(self._ico_path) if self._ico_path.exists() else None,
