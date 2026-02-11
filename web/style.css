@@ -126,6 +126,15 @@ nav ul a:hover {
     max-width: 560px;
     margin: 0 auto 2.5rem;
     line-height: 1.7;
+    transform: translateY(60px);
+}
+
+.hero .btn-group {
+    transform: translateY(60px);
+}
+
+.hero .kofi-button-container {
+    transform: translateY(60px);
 }
 
 /* ===== Buttons ===== */
