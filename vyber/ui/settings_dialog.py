@@ -223,9 +223,15 @@ class SettingsDialog(tk.Toplevel):
             value="stop",
         ).pack(anchor="w", padx=20, pady=2)
 
-        # --- Save / Cancel buttons ---
+        # --- Save / Cancel / Exit buttons ---
         btn_frame = ctk.CTkFrame(self._outer, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=15, pady=(8, 6))
+        btn_frame.pack(fill="x", padx=15, pady=(8, 12))
+
+        ctk.CTkButton(
+            btn_frame, text="Exit Vyber", width=110,
+            fg_color="#8B0000", hover_color="#B22222",
+            command=self._handle_exit,
+        ).pack(side="left", padx=5)
 
         ctk.CTkButton(
             btn_frame, text="Save", width=100,
@@ -237,16 +243,6 @@ class SettingsDialog(tk.Toplevel):
             fg_color="#37474F", hover_color="#546E7A",
             command=self.destroy
         ).pack(side="right", padx=5)
-
-        # --- Exit Vyber ---
-        exit_frame = ctk.CTkFrame(self._outer, fg_color="transparent")
-        exit_frame.pack(fill="x", padx=15, pady=(2, 12))
-
-        ctk.CTkButton(
-            exit_frame, text="Exit Vyber", width=120,
-            fg_color="#8B0000", hover_color="#B22222",
-            command=self._handle_exit,
-        ).pack(side="left", padx=5)
 
     def _handle_exit(self):
         """Fully exit Vyber (not just minimize to tray)."""
