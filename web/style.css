@@ -267,6 +267,38 @@ nav ul a:hover {
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+}
+
+.app-screenshot:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 32px var(--accent-glow);
+}
+
+/* Fullscreen lightbox overlay */
+.screenshot-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+
+.screenshot-overlay.active {
+    opacity: 1;
+}
+
+.screenshot-overlay img {
+    max-width: 95vw;
+    max-height: 95vh;
+    border-radius: 8px;
+    box-shadow: 0 0 60px var(--accent-glow);
 }
 
 /* ===== Getting Started ===== */
