@@ -102,14 +102,14 @@ nav ul a:hover {
 .hero-logo {
     width: 480px;
     max-width: 85vw;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0;
     filter: drop-shadow(0 0 40px var(--accent-glow));
 }
 
 .hero h1 {
     font-size: 3.5rem;
     font-weight: 800;
-    margin-top: 1rem;
+    margin-top: 2.5rem;
     margin-bottom: 1rem;
     letter-spacing: 0.02em;
     background: linear-gradient(180deg, #ffffff 0%, var(--accent-hover) 50%, var(--accent-dim) 100%);
