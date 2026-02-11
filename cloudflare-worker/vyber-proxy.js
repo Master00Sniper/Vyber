@@ -157,8 +157,8 @@ async function handleRequest(request) {
         });
       }
 
-      // Track version distribution
-      if (version) {
+      // Track version distribution (only on app_start — version doesn't change mid-session)
+      if (version && event === 'app_start') {
         const versionKey = `version:${today}:${version}`;
         const versionCount = parseInt(await VYBER_TELEMETRY.get(versionKey) || '0') + 1;
         await VYBER_TELEMETRY.put(versionKey, versionCount.toString(), {
