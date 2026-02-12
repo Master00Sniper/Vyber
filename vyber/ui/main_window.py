@@ -123,7 +123,7 @@ class MainWindow:
             hover_color="#4752C4",
             command=self.callbacks.get("on_discord_guide"),
         )
-        self.discord_button.pack(side="left", padx=5)
+        self.discord_button.pack(anchor="center")
 
         # --- Status bar ---
         self.status_bar = StatusBar(self.root)

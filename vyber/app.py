@@ -1243,7 +1243,7 @@ class VyberApp:
         dialog.withdraw()
         dialog.configure(bg=_DARK_BG)
         dialog.title("About Vyber")
-        dialog.geometry("480x540")
+        dialog.geometry("480x580")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
@@ -1328,6 +1328,24 @@ class VyberApp:
         x_link.pack(side="left")
         x_link.bind("<Button-1>",
                      lambda e: os.startfile("https://x.com/master00sniper"))
+
+        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
+            fill="x", padx=30, pady=10)
+
+        # --- Credits ---
+        ctk.CTkLabel(scroll, text="Credits",
+                     font=bold).pack(anchor="center", pady=(4, 4))
+
+        icons8_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+        icons8_frame.pack(anchor="center", pady=2)
+        ctk.CTkLabel(icons8_frame, text="Icons by ", font=body).pack(side="left")
+        icons8_link = ctk.CTkLabel(
+            icons8_frame, text="Icons8",
+            font=ctk.CTkFont(size=13, underline=True),
+            text_color="#1DA1F2", cursor="hand2")
+        icons8_link.pack(side="left")
+        icons8_link.bind("<Button-1>",
+                         lambda e: os.startfile("https://icons8.com/"))
 
         ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
             fill="x", padx=30, pady=10)
