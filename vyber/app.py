@@ -997,20 +997,13 @@ class VyberApp:
             "other apps' volume when someone speaks.",
         )
 
-        # --- Tip ---
-        tip_card = ctk.CTkFrame(scroll, fg_color=_TIP_BG, corner_radius=10)
-        tip_card.pack(fill="x", pady=(4, 8))
-        tip_header = ctk.CTkFrame(tip_card, fg_color="transparent")
-        tip_header.pack(anchor="w", padx=14, pady=(10, 2))
-        ctk.CTkLabel(tip_header, text="Vyber Tip",
-                     font=step_title_font, text_color="#66bb6a"
-                     ).pack(side="left")
+        # --- Note ---
         ctk.CTkLabel(
-            tip_card, font=body_font, wraplength=420, justify="left",
-            text="Set the output mode to \"Both\" so your friends hear "
-                 "sounds and you do too. Enable \"Mic Passthrough\" in "
-                 "Vyber Settings if you need your voice mixed in."
-        ).pack(anchor="w", padx=(14, 16), pady=(0, 12))
+            scroll, font=small_font, wraplength=420, justify="center",
+            text_color=dim,
+            text="These are the settings that have worked best for me, "
+                 "but feel free to adjust them to suit your setup."
+        ).pack(pady=(6, 8))
 
         # --- Close button ---
         ctk.CTkButton(outer, text="Got It", width=120, height=34,
