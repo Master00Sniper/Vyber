@@ -908,15 +908,15 @@ class VyberApp:
 
             # Body text
             ctk.CTkLabel(card, text=body_text, font=body_font,
-                         wraplength=440, justify="left"
-                         ).pack(anchor="w", padx=(52, 14), pady=(2, 0))
+                         wraplength=390, justify="left"
+                         ).pack(anchor="w", padx=(52, 16), pady=(2, 0))
 
             # Highlighted setting name (e.g. device to select)
             if highlights:
                 for h in highlights:
                     hl = ctk.CTkFrame(card, fg_color=_HIGHLIGHT_BG,
                                       corner_radius=6)
-                    hl.pack(anchor="w", padx=(52, 14), pady=(6, 0))
+                    hl.pack(anchor="w", padx=(52, 16), pady=(6, 0))
                     ctk.CTkLabel(hl, text=h, font=setting_font,
                                  text_color="#7aafff"
                                  ).pack(padx=10, pady=4)
@@ -924,7 +924,7 @@ class VyberApp:
             # Toggle list (OFF badges)
             if toggles:
                 tog_frame = ctk.CTkFrame(card, fg_color="transparent")
-                tog_frame.pack(anchor="w", padx=(48, 14), pady=(6, 0))
+                tog_frame.pack(anchor="w", padx=(48, 16), pady=(6, 0))
                 for item in toggles:
                     if isinstance(item, tuple):
                         name, reason = item
@@ -1006,11 +1006,11 @@ class VyberApp:
                      font=step_title_font, text_color="#66bb6a"
                      ).pack(side="left")
         ctk.CTkLabel(
-            tip_card, font=body_font, wraplength=440, justify="left",
+            tip_card, font=body_font, wraplength=420, justify="left",
             text="Set the output mode to \"Both\" so your friends hear "
                  "sounds and you do too. Enable \"Mic Passthrough\" in "
                  "Vyber Settings if you need your voice mixed in."
-        ).pack(anchor="w", padx=(14, 14), pady=(0, 12))
+        ).pack(anchor="w", padx=(14, 16), pady=(0, 12))
 
         # --- Close button ---
         ctk.CTkButton(outer, text="Got It", width=120, height=34,
