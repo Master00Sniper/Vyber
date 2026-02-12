@@ -1005,6 +1005,23 @@ class VyberApp:
                  "but feel free to adjust them to suit your setup."
         ).pack(pady=(6, 8))
 
+        # --- Mic warning ---
+        warn_card = ctk.CTkFrame(scroll, fg_color="#3a2a10",
+                                 corner_radius=10)
+        warn_card.pack(fill="x", pady=(0, 8))
+        warn_header = ctk.CTkFrame(warn_card, fg_color="transparent")
+        warn_header.pack(anchor="w", padx=14, pady=(10, 2))
+        ctk.CTkLabel(warn_header, text="Heads Up",
+                     font=step_title_font, text_color="#ffb347"
+                     ).pack(side="left")
+        ctk.CTkLabel(
+            warn_card, font=body_font, wraplength=420, justify="left",
+            text="When Vyber isn't running, your microphone won't pick "
+                 "up any audio while Discord's input device is still set "
+                 "to VB-CABLE. Switch your Discord input device back to "
+                 "your regular microphone when you're done using Vyber."
+        ).pack(anchor="w", padx=(14, 16), pady=(0, 12))
+
         # --- Close button ---
         ctk.CTkButton(outer, text="Got It", width=120, height=34,
                        fg_color=_ACCENT, hover_color="#4752C4",
