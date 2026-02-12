@@ -66,20 +66,52 @@ nav .logo img {
     height: 32px;
 }
 
-nav ul {
+nav .nav-links {
     list-style: none;
     display: flex;
     gap: 2rem;
 }
 
-nav ul a {
+nav .nav-links a {
     color: var(--text-secondary);
     font-size: 0.95rem;
     transition: color 0.2s;
 }
 
-nav ul a:hover {
+nav .nav-links a:hover {
     color: var(--text-primary);
+}
+
+/* Hamburger toggle — hidden on desktop */
+.nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nav-toggle span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--text-primary);
+    border-radius: 2px;
+    transition: transform 0.25s, opacity 0.25s;
+}
+
+.nav-toggle.active span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.nav-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.nav-toggle.active span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
 }
 
 /* ===== Hero ===== */
@@ -555,10 +587,33 @@ footer {
 @media (max-width: 768px) {
     nav {
         padding: 1rem 1.5rem;
+        flex-wrap: wrap;
     }
 
-    nav ul {
-        gap: 1rem;
+    .nav-toggle {
+        display: flex;
+    }
+
+    nav .nav-links {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        gap: 0;
+        padding-top: 1rem;
+    }
+
+    nav .nav-links.open {
+        display: flex;
+    }
+
+    nav .nav-links li {
+        border-top: 1px solid var(--border);
+    }
+
+    nav .nav-links a {
+        display: block;
+        padding: 0.75rem 0;
+        font-size: 1rem;
     }
 
     .hero {
