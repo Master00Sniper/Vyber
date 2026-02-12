@@ -1,6 +1,5 @@
-# Vyber v0.1.3
+# Vyber v0.1.4
 
 ## Changes
 
-- **Fix update check** — Update checker no longer silently fails; shows distinct messages for "up to date", "update available", and errors with details
-- **Website improvements** — Adjusted hero layout, added download/GitHub icons to buttons, added Morton Apps callout, download links now go through proxy for direct .exe download
+- **Manual update flow** — Update check now directs users to vyber.mortonapps.com instead of auto-downloading, avoiding Windows Defender blocking the swapped exe
