@@ -126,6 +126,10 @@ def download_and_apply(download_url, show_notification_func=None):
     """
     Download the new exe and apply the update (restarts Vyber).
 
+    NOTE: Currently unused — Windows Defender blocks the swapped exe for
+    unsigned/low-reputation apps.  Kept for future use once code-signing is
+    in place.  The UI now directs users to vyber.mortonapps.com instead.
+
     Args:
         download_url: Direct URL to the new Vyber.exe asset.
         show_notification_func: Optional callback for status messages.

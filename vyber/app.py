@@ -213,8 +213,7 @@ class VyberApp:
         status = result.get("status")
         if status == "update":
             self.root.after(
-                0, lambda: self._show_update_prompt(
-                    result["version"], result["url"])
+                0, lambda: self._show_update_prompt(result["version"])
             )
         elif status == "up_to_date":
             self.root.after(0, self._show_up_to_date)
@@ -268,15 +267,16 @@ class VyberApp:
         ctk.CTkButton(outer, text="OK", width=80, command=dialog.destroy).pack()
         self._setup_dialog(dialog)
 
-    def _show_update_prompt(self, latest_version, download_url):
-        """Show a dialog asking the user if they want to update."""
+    def _show_update_prompt(self, latest_version):
+        """Show a dialog telling the user a new version is available."""
+        import webbrowser
         from vyber import __version__
 
         dialog = tk.Toplevel(self.root)
         dialog.withdraw()
         dialog.configure(bg=_DARK_BG)
         dialog.title("Update Available")
-        dialog.geometry("380x150")
+        dialog.geometry("400x160")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
@@ -293,16 +293,12 @@ class VyberApp:
         btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
         btn_frame.pack()
 
-        def on_update():
+        def on_download():
+            webbrowser.open("https://vyber.mortonapps.com/")
             dialog.destroy()
-            threading.Thread(
-                target=updater.download_and_apply,
-                args=(download_url,),
-                daemon=True,
-            ).start()
 
-        ctk.CTkButton(btn_frame, text="Update Now", width=110,
-                       command=on_update).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Download Update", width=140,
+                       command=on_download).pack(side="left", padx=5)
         ctk.CTkButton(btn_frame, text="Later", width=80, fg_color="#444444",
                        hover_color="#555555", command=dialog.destroy).pack(side="left", padx=5)
         self._setup_dialog(dialog)
