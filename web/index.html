@@ -3,16 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vyber - Soundboard with Virtual Mic Routing</title>
-    <meta name="description" content="Play sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming.">
+    <title>Vyber - Free Soundboard with Virtual Mic Routing for Discord</title>
+    <meta name="description" content="Free Windows soundboard that plays sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming. Open source.">
+    <link rel="canonical" href="https://vyber.mortonapps.com/">
     <link rel="icon" type="image/png" href="images/tray_icon.png">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Vyber - Free Soundboard with Virtual Mic Routing">
+    <meta property="og:description" content="Play sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming.">
+    <meta property="og:url" content="https://vyber.mortonapps.com/">
+    <meta property="og:image" content="https://vyber.mortonapps.com/images/mortonapps_opengraph.jpg">
+    <meta property="og:site_name" content="Vyber">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Vyber - Free Soundboard with Virtual Mic Routing">
+    <meta name="twitter:description" content="Play sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming.">
+    <meta name="twitter:image" content="https://vyber.mortonapps.com/images/mortonapps_opengraph.jpg">
+
     <link rel="stylesheet" href="style.css">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Vyber",
+        "operatingSystem": "Windows",
+        "applicationCategory": "MultimediaApplication",
+        "description": "Free Windows soundboard that plays sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming.",
+        "url": "https://vyber.mortonapps.com/",
+        "downloadUrl": "https://vyber-proxy.mortonapps.com/download/latest",
+        "softwareVersion": "0.1.3",
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "author": {
+            "@type": "Organization",
+            "name": "Morton Apps",
+            "url": "https://mortonapps.com"
+        }
+    }
+    </script>
 </head>
 <body>
     <header>
         <nav>
             <a href="#" class="logo">
-                <img src="images/tray_icon.png" alt="Vyber">
+                <img src="images/tray_icon.png" alt="Vyber icon" width="32" height="32">
                 Vyber
             </a>
             <ul>
@@ -20,123 +62,126 @@
                 <li><a href="#screenshot">How It Works</a></li>
                 <li><a href="#setup">Get Started</a></li>
                 <li><a href="#download">Download</a></li>
-                <li><a href="https://github.com/Master00Sniper/Vyber">GitHub</a></li>
+                <li><a href="https://github.com/Master00Sniper/Vyber" rel="noopener noreferrer">GitHub</a></li>
                 <li><a href="policies.html">Privacy</a></li>
-                <li><a href="https://ko-fi.com/master00sniper">Support</a></li>
+                <li><a href="https://ko-fi.com/master00sniper" rel="noopener noreferrer">Support</a></li>
             </ul>
         </nav>
     </header>
 
-    <!-- ===== Hero ===== -->
-    <section class="hero">
-        <div class="hero-content">
-            <img src="images/vapor_splash_transparent.png" alt="Vyber" class="hero-logo">
-            <h1>Be The DJ Nobody Asked For</h1>
-            <p class="tagline">An easy-to-use soundboard built for Discord and voice chat. Sounds play through your speakers and into your friends' ears at the same time — no complicated audio setup needed.</p>
+    <main>
+        <!-- ===== Hero ===== -->
+        <section class="hero">
+            <div class="hero-content">
+                <img src="images/vapor_splash_transparent.png" alt="Vyber soundboard logo" class="hero-logo" width="480" height="480">
+                <h1>Be The DJ Nobody Asked For</h1>
+                <p class="tagline">An easy-to-use soundboard built for Discord and voice chat. Sounds play through your speakers and into your friends' ears at the same time — no complicated audio setup needed.</p>
+                <div class="btn-group">
+                    <a href="https://vyber-proxy.mortonapps.com/download/latest" class="btn btn-primary"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 12l-4.5-4.5 1.06-1.06L7.5 9.38V1h1v8.38l2.94-2.94 1.06 1.06L8 12z"/><path d="M14 13v1H2v-1h12z"/></svg> Download for Windows</a>
+                    <a href="https://github.com/Master00Sniper/Vyber" class="btn btn-secondary" rel="noopener noreferrer"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> View on GitHub</a>
+                </div>
+                <div class="kofi-button-container">
+                    <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+                    <script type='text/javascript'>kofiwidget2.init('Support Development on Ko-fi', '#72a4f2', 'U7U51THXWE');kofiwidget2.draw();</script>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== Features ===== -->
+        <section id="features" class="features">
+            <h2>Features</h2>
+            <p class="section-sub">Everything you need for a soundboard that actually works in voice chat.</p>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="icon" aria-hidden="true">&#127911;</span>
+                    <h3>Dual Audio Output</h3>
+                    <p>Play sounds through your speakers and virtual microphone simultaneously. People in voice chat hear your sounds instantly.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon" aria-hidden="true">&#9889;</span>
+                    <h3>One-Click Setup</h3>
+                    <p>Vyber installs VB-CABLE for you and handles all audio routing automatically. Just download and run.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon" aria-hidden="true">&#127908;</span>
+                    <h3>Mic Passthrough</h3>
+                    <p>Your voice and soundboard audio are mixed together so you can talk and play sounds at the same time.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon" aria-hidden="true">&#9000;</span>
+                    <h3>Global Hotkeys</h3>
+                    <p>Trigger any sound with a keyboard shortcut that works even while you're in a game or another app.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon" aria-hidden="true">&#128193;</span>
+                    <h3>Organized Library</h3>
+                    <p>Sort your sounds into tabbed categories. Add, rename, reorder, and manage everything with drag-and-drop.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="icon" aria-hidden="true">&#128266;</span>
+                    <h3>Per-Sound Volume</h3>
+                    <p>Adjust each sound from 0% to 200%. Boost quiet clips without turning down everything else.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== Screenshot ===== -->
+        <section id="screenshot" class="screenshot-section">
+            <h2>How It Works</h2>
+            <p class="section-sub">Add your sounds, organize them into categories, and trigger them with a click or hotkey.</p>
+            <div class="screenshot-wrapper">
+                <img src="images/vyber_screenshot.png" alt="Vyber soundboard application showing sound buttons organized in categories with volume controls and audio device settings" class="app-screenshot">
+            </div>
+        </section>
+
+        <!-- ===== Getting Started ===== -->
+        <section id="setup" class="setup">
+            <h2>Getting Started</h2>
+            <div class="steps">
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <h3>Download Vyber</h3>
+                    <p>Grab the latest <strong>Vyber.exe</strong> from the <a href="https://vyber-proxy.mortonapps.com/download/latest">download section</a>. No install wizard — just run it.</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <h3>Install VB-CABLE</h3>
+                    <p>Vyber will prompt you to install <a href="https://vb-audio.com/Cable/" rel="noopener noreferrer">VB-CABLE</a> on first launch. Reboot after installing.</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <h3>Add Sounds &amp; Play</h3>
+                    <p>Add your audio files, set the output to "Both", and follow the Discord Setup guide inside the app.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== Download ===== -->
+        <section id="download" class="download">
+            <h2>Download</h2>
+            <p>Grab the latest version of Vyber — no installer needed, just download and run.</p>
             <div class="btn-group">
-                <a href="https://vyber-proxy.mortonapps.com/download/latest" class="btn btn-primary"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4.5-4.5 1.06-1.06L7.5 9.38V1h1v8.38l2.94-2.94 1.06 1.06L8 12z"/><path d="M14 13v1H2v-1h12z"/></svg> Download for Windows</a>
-                <a href="https://github.com/Master00Sniper/Vyber" class="btn btn-secondary"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> View on GitHub</a>
+                <a href="https://vyber-proxy.mortonapps.com/download/latest" class="btn btn-primary"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 12l-4.5-4.5 1.06-1.06L7.5 9.38V1h1v8.38l2.94-2.94 1.06 1.06L8 12z"/><path d="M14 13v1H2v-1h12z"/></svg> Download for Windows</a>
+                <a href="https://github.com/Master00Sniper/Vyber" class="btn btn-secondary" rel="noopener noreferrer"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> View on GitHub</a>
             </div>
-            <div class="kofi-button-container">
-                <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
-                <script type='text/javascript'>kofiwidget2.init('Support Development on Ko-fi', '#72a4f2', 'U7U51THXWE');kofiwidget2.draw();</script>
-            </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ===== Features ===== -->
-    <section id="features" class="features">
-        <h2>Features</h2>
-        <p class="section-sub">Everything you need for a soundboard that actually works in voice chat.</p>
-        <div class="feature-grid">
-            <div class="feature-card">
-                <span class="icon">&#127911;</span>
-                <h3>Dual Audio Output</h3>
-                <p>Play sounds through your speakers and virtual microphone simultaneously. People in voice chat hear your sounds instantly.</p>
-            </div>
-            <div class="feature-card">
-                <span class="icon">&#9889;</span>
-                <h3>One-Click Setup</h3>
-                <p>Vyber installs VB-CABLE for you and handles all audio routing automatically. Just download and run.</p>
-            </div>
-            <div class="feature-card">
-                <span class="icon">&#127908;</span>
-                <h3>Mic Passthrough</h3>
-                <p>Your voice and soundboard audio are mixed together so you can talk and play sounds at the same time.</p>
-            </div>
-            <div class="feature-card">
-                <span class="icon">&#9000;</span>
-                <h3>Global Hotkeys</h3>
-                <p>Trigger any sound with a keyboard shortcut that works even while you're in a game or another app.</p>
-            </div>
-            <div class="feature-card">
-                <span class="icon">&#128193;</span>
-                <h3>Organized Library</h3>
-                <p>Sort your sounds into tabbed categories. Add, rename, reorder, and manage everything with drag-and-drop.</p>
-            </div>
-            <div class="feature-card">
-                <span class="icon">&#128266;</span>
-                <h3>Per-Sound Volume</h3>
-                <p>Adjust each sound from 0% to 200%. Boost quiet clips without turning down everything else.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== Screenshot ===== -->
-    <section id="screenshot" class="screenshot-section">
-        <h2>How It Works</h2>
-        <p class="section-sub">Add your sounds, organize them into categories, and trigger them with a click or hotkey.</p>
-        <div class="screenshot-wrapper">
-            <img src="images/vyber_screenshot.png" alt="Vyber application screenshot" class="app-screenshot">
-        </div>
-    </section>
-
-    <!-- ===== Getting Started ===== -->
-    <section id="setup" class="setup">
-        <h2>Getting Started</h2>
-        <div class="steps">
-            <div class="step">
-                <span class="step-number">1</span>
-                <h3>Download Vyber</h3>
-                <p>Grab the latest <strong>Vyber.exe</strong> from the <a href="https://vyber-proxy.mortonapps.com/download/latest">download section</a>. No install wizard — just run it.</p>
-            </div>
-            <div class="step">
-                <span class="step-number">2</span>
-                <h3>Install VB-CABLE</h3>
-                <p>Vyber will prompt you to install <a href="https://vb-audio.com/Cable/">VB-CABLE</a> on first launch. Reboot after installing.</p>
-            </div>
-            <div class="step">
-                <span class="step-number">3</span>
-                <h3>Add Sounds &amp; Play</h3>
-                <p>Add your audio files, set the output to "Both", and follow the Discord Setup guide inside the app.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== Download ===== -->
-    <section id="download" class="download">
-        <h2>Download</h2>
-        <p>Grab the latest version of Vyber — no installer needed, just download and run.</p>
-        <div class="btn-group">
-            <a href="https://vyber-proxy.mortonapps.com/download/latest" class="btn btn-primary"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4.5-4.5 1.06-1.06L7.5 9.38V1h1v8.38l2.94-2.94 1.06 1.06L8 12z"/><path d="M14 13v1H2v-1h12z"/></svg> Download for Windows</a>
-            <a href="https://github.com/Master00Sniper/Vyber" class="btn btn-secondary"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> View on GitHub</a>
-        </div>
-    </section>
-
-    <!-- ===== Morton Apps Callout ===== -->
-    <section class="morton-callout">
-        <p>Vyber is a <strong>Morton Apps</strong> project</p>
-        <a href="https://mortonapps.com" class="morton-link">Explore more apps <span class="arrow">&rarr;</span></a>
-    </section>
+        <!-- ===== Morton Apps Callout ===== -->
+        <section class="morton-callout">
+            <img src="images/mortonapps_logo_transparent.png" alt="Morton Apps logo" class="morton-logo">
+            <p>Vyber is a <strong>Morton Apps</strong> project</p>
+            <a href="https://mortonapps.com" class="morton-link" rel="noopener noreferrer">Explore more apps <span class="arrow">&rarr;</span></a>
+        </section>
+    </main>
 
     <footer>
         <div class="footer-links">
-            <a href="https://github.com/Master00Sniper/Vyber">GitHub</a>
-            <a href="https://github.com/Master00Sniper/Vyber/issues">Report a Bug</a>
+            <a href="https://github.com/Master00Sniper/Vyber" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/Master00Sniper/Vyber/issues" rel="noopener noreferrer">Report a Bug</a>
             <a href="policies.html">Privacy</a>
-            <a href="https://ko-fi.com/master00sniper">Ko-fi</a>
+            <a href="https://ko-fi.com/master00sniper" rel="noopener noreferrer">Ko-fi</a>
         </div>
-        <p>&copy; 2026 Vyber. All rights reserved.</p>
+        <p>&copy; 2026 Morton Apps. All rights reserved.</p>
     </footer>
 
     <script src="script.js"></script>
