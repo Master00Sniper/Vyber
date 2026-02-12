@@ -1074,7 +1074,7 @@ class VyberApp:
                  "  \u2022  Disable Discord's voice processing (see Discord Setup)\n"
                  "  \u2022  Click \"Refresh Audio Devices\" in the menu if you changed\n"
                  "     audio devices after launching Vyber\n"
-                 "  \u2022  Try setting the output mode to \"Both\"",
+                 "  \u2022  Make sure the output mode is set to \"Both\" (the default)",
         ).pack(anchor="w", padx=20, pady=(0, 4))
 
         # --- Bug Report ---
