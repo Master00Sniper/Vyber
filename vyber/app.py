@@ -850,124 +850,171 @@ class VyberApp:
         dialog.withdraw()
         dialog.configure(bg=_DARK_BG)
         dialog.title("Discord Setup Guide")
-        dialog.geometry("520x560")
+        dialog.geometry("540x600")
         dialog.resizable(False, False)
         dialog.transient(self.root)
         dialog.grab_set()
+
+        _CARD_BG = "#2b2b2b"
+        _ACCENT = "#5865F2"       # Discord blurple
+        _NUM_BG = "#5865F2"
+        _HIGHLIGHT_BG = "#1e3a5f"
+        _OFF_COLOR = "#FF5722"
+        _TIP_BG = "#1a3a1a"
 
         outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
         outer.pack(fill="both", expand=True)
 
         scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent")
-        scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
+        scroll.pack(fill="both", expand=True, padx=12, pady=(10, 0))
 
-        bold = ctk.CTkFont(size=14, weight="bold")
-        heading = ctk.CTkFont(size=16, weight="bold")
-        body = ctk.CTkFont(size=13)
+        heading_font = ctk.CTkFont(size=18, weight="bold")
+        step_title_font = ctk.CTkFont(size=14, weight="bold")
+        body_font = ctk.CTkFont(size=13)
+        small_font = ctk.CTkFont(size=12)
+        num_font = ctk.CTkFont(size=14, weight="bold")
+        off_font = ctk.CTkFont(size=11, weight="bold")
+        setting_font = ctk.CTkFont(size=12)
         dim = "gray70"
 
         # --- Title ---
         ctk.CTkLabel(scroll, text="Setting Up Vyber with Discord",
-                     font=heading).pack(anchor="w", pady=(5, 10))
+                     font=heading_font, text_color=_ACCENT
+                     ).pack(anchor="w", pady=(5, 2))
+        ctk.CTkLabel(scroll, text="Follow these steps in Discord's Voice & Video settings.",
+                     font=small_font, text_color=dim
+                     ).pack(anchor="w", pady=(0, 10))
+
+        def _make_step_card(parent, number, title, body_text,
+                            highlights=None, toggles=None):
+            """Build a rounded card with a numbered circle and content."""
+            card = ctk.CTkFrame(parent, fg_color=_CARD_BG, corner_radius=10)
+            card.pack(fill="x", pady=(0, 8))
+
+            # Header row: number badge + title
+            header = ctk.CTkFrame(card, fg_color="transparent")
+            header.pack(fill="x", padx=14, pady=(12, 4))
+
+            badge = ctk.CTkFrame(header, fg_color=_NUM_BG,
+                                 corner_radius=13, width=26, height=26)
+            badge.pack(side="left")
+            badge.pack_propagate(False)
+            ctk.CTkLabel(badge, text=str(number), font=num_font,
+                         text_color="white").place(relx=0.5, rely=0.5,
+                                                   anchor="center")
+
+            ctk.CTkLabel(header, text=title, font=step_title_font
+                         ).pack(side="left", padx=(10, 0))
+
+            # Body text
+            ctk.CTkLabel(card, text=body_text, font=body_font,
+                         wraplength=440, justify="left"
+                         ).pack(anchor="w", padx=(52, 14), pady=(2, 0))
+
+            # Highlighted setting name (e.g. device to select)
+            if highlights:
+                for h in highlights:
+                    hl = ctk.CTkFrame(card, fg_color=_HIGHLIGHT_BG,
+                                      corner_radius=6)
+                    hl.pack(anchor="w", padx=(52, 14), pady=(6, 0))
+                    ctk.CTkLabel(hl, text=h, font=setting_font,
+                                 text_color="#7aafff"
+                                 ).pack(padx=10, pady=4)
+
+            # Toggle list (OFF badges)
+            if toggles:
+                tog_frame = ctk.CTkFrame(card, fg_color="transparent")
+                tog_frame.pack(anchor="w", padx=(48, 14), pady=(6, 0))
+                for item in toggles:
+                    if isinstance(item, tuple):
+                        name, reason = item
+                    else:
+                        name, reason = item, None
+                    row = ctk.CTkFrame(tog_frame, fg_color="transparent")
+                    row.pack(fill="x", pady=2)
+                    off_badge = ctk.CTkFrame(row, fg_color="#3d1a12",
+                                             corner_radius=4, width=34,
+                                             height=20)
+                    off_badge.pack(side="left")
+                    off_badge.pack_propagate(False)
+                    ctk.CTkLabel(off_badge, text="OFF", font=off_font,
+                                 text_color=_OFF_COLOR
+                                 ).place(relx=0.5, rely=0.5, anchor="center")
+                    ctk.CTkLabel(row, text=f"  {name}", font=body_font
+                                 ).pack(side="left")
+                    if reason:
+                        ctk.CTkLabel(row, text=f"  — {reason}", font=small_font,
+                                     text_color=dim).pack(side="left")
+
+            # Bottom padding inside card
+            ctk.CTkFrame(card, fg_color="transparent", height=10
+                         ).pack(fill="x")
 
         # --- Step 1 ---
-        ctk.CTkLabel(scroll, text="Step 1 — Set Your Input Device",
-                     font=bold).pack(anchor="w", pady=(8, 2))
-        ctk.CTkLabel(
-            scroll, font=body, wraplength=440, justify="left",
-            text="In Discord, go to Settings > Voice & Video.\n\n"
-                 "Under INPUT DEVICE, select:\n"
-                 "    CABLE Output (VB-Audio Virtual Cable)\n\n"
-                 "This tells Discord to listen to VB-CABLE, which is "
-                 "where Vyber sends its audio.\n\n"
-                 "Note: Discord won't pick up any audio when Vyber "
-                 "isn't running, since VB-CABLE is a virtual device "
-                 "that only carries audio from Vyber."
-        ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
+        _make_step_card(
+            scroll, 1, "Set Your Input Device",
+            "In Discord, go to Settings > Voice & Video.\n"
+            "Under INPUT DEVICE, select:",
+            highlights=["CABLE Output (VB-Audio Virtual Cable)"],
+        )
 
         # --- Step 2 ---
-        ctk.CTkLabel(scroll, text="Step 2 — Input Sensitivity",
-                     font=bold).pack(anchor="w", pady=(12, 2))
-        ctk.CTkLabel(
-            scroll, font=body, wraplength=440, justify="left",
-            text="Uncheck \"Automatically determine input sensitivity\" "
-                 "and manually set the sensitivity slider as low as your "
-                 "quietest sound clip. This prevents Discord from cutting "
-                 "off quieter sounds.\n\n"
-                 "Tip: You can also right-click any sound in Vyber and "
-                 "adjust its volume up to 200% if it's too quiet."
-        ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
+        _make_step_card(
+            scroll, 2, "Lower Input Sensitivity",
+            "Uncheck \"Automatically determine input sensitivity\" and "
+            "drag the slider as low as your quietest sound clip. This "
+            "prevents Discord from cutting off quiet sounds.",
+        )
 
         # --- Step 3 ---
-        ctk.CTkLabel(scroll, text="Step 3 — Disable Audio Processing",
-                     font=bold).pack(anchor="w", pady=(12, 2))
-        ctk.CTkLabel(
-            scroll, font=body, wraplength=440, justify="left",
-            text="Discord's audio processing is designed for real "
-                 "microphones and will distort soundboard audio. "
-                 "Scroll down to the Voice Processing section and "
-                 "disable the following:"
-        ).pack(anchor="w", padx=(10, 0), pady=(0, 6))
-
-        toggles = [
-            ("Krisp Noise Suppression", "Will filter out your sound effects"),
-            ("Echo Cancellation", "Causes audio artifacts on played sounds"),
-        ]
-        for name, reason in toggles:
-            row = ctk.CTkFrame(scroll, fg_color="transparent")
-            row.pack(fill="x", padx=(10, 0), pady=1)
-            ctk.CTkLabel(row, text=f"OFF", font=ctk.CTkFont(size=12, weight="bold"),
-                         text_color="#FF5722", width=32).pack(side="left")
-            ctk.CTkLabel(row, text=f"  {name}", font=body).pack(side="left")
-            ctk.CTkLabel(row, text=f"  — {reason}", font=body,
-                         text_color=dim).pack(side="left")
+        _make_step_card(
+            scroll, 3, "Disable Voice Processing",
+            "Discord's voice processing distorts soundboard audio. "
+            "In the Voice Processing section, turn off:",
+            toggles=[
+                ("Krisp Noise Suppression", "Filters out sound effects"),
+                ("Echo Cancellation", "Causes audio artifacts"),
+            ],
+        )
 
         # --- Step 4 ---
-        ctk.CTkLabel(scroll, text="Step 4 — Advanced Voice Settings",
-                     font=bold).pack(anchor="w", pady=(14, 2))
-        ctk.CTkLabel(
-            scroll, font=body, wraplength=440, justify="left",
-            text="Expand \"Advanced Voice Settings\" at the bottom of "
-                 "the Voice & Video page and also disable:"
-        ).pack(anchor="w", padx=(10, 0), pady=(0, 6))
-
-        advanced_toggles = [
-            "Automatic Gain Control",
-            "Advanced Voice Activity",
-            "Bypass System Audio Input Processing",
-            "No Audio Detected Warning",
-        ]
-        for name in advanced_toggles:
-            row = ctk.CTkFrame(scroll, fg_color="transparent")
-            row.pack(fill="x", padx=(10, 0), pady=1)
-            ctk.CTkLabel(row, text=f"OFF", font=ctk.CTkFont(size=12, weight="bold"),
-                         text_color="#FF5722", width=32).pack(side="left")
-            ctk.CTkLabel(row, text=f"  {name}", font=body).pack(side="left")
+        _make_step_card(
+            scroll, 4, "Advanced Voice Settings",
+            "Expand \"Advanced Voice Settings\" at the bottom "
+            "and also disable:",
+            toggles=[
+                "Automatic Gain Control",
+                "Advanced Voice Activity",
+                "Bypass System Audio Input Processing",
+                "No Audio Detected Warning",
+            ],
+        )
 
         # --- Step 5 ---
-        ctk.CTkLabel(scroll, text="Step 5 — Global Attenuation",
-                     font=bold).pack(anchor="w", pady=(14, 2))
-        ctk.CTkLabel(
-            scroll, font=body, wraplength=440, justify="left",
-            text="Set Global Attenuation to 0%. This prevents Discord "
-                 "from lowering the volume of other applications when "
-                 "someone is speaking, which can interfere with Vyber's "
-                 "audio output."
-        ).pack(anchor="w", padx=(10, 0), pady=(0, 4))
+        _make_step_card(
+            scroll, 5, "Global Attenuation",
+            "Set Global Attenuation to 0% so Discord doesn't lower "
+            "other apps' volume when someone speaks.",
+        )
 
         # --- Tip ---
-        tip_frame = ctk.CTkFrame(scroll, fg_color="#1a3a1a", corner_radius=8)
-        tip_frame.pack(fill="x", padx=15, pady=(14, 8))
+        tip_card = ctk.CTkFrame(scroll, fg_color=_TIP_BG, corner_radius=10)
+        tip_card.pack(fill="x", pady=(4, 8))
+        tip_header = ctk.CTkFrame(tip_card, fg_color="transparent")
+        tip_header.pack(anchor="w", padx=14, pady=(10, 2))
+        ctk.CTkLabel(tip_header, text="Vyber Tip",
+                     font=step_title_font, text_color="#66bb6a"
+                     ).pack(side="left")
         ctk.CTkLabel(
-            tip_frame, font=body, wraplength=420, justify="left",
-            text="Tip: In Vyber, set the output mode to \"Both\" so your "
-                 "friends hear the sounds and you do too. If your own voice "
-                 "needs to go through as well, make sure \"Mic Passthrough\" "
-                 "is enabled in Vyber Settings."
-        ).pack(padx=14, pady=10)
+            tip_card, font=body_font, wraplength=440, justify="left",
+            text="Set the output mode to \"Both\" so your friends hear "
+                 "sounds and you do too. Enable \"Mic Passthrough\" in "
+                 "Vyber Settings if you need your voice mixed in."
+        ).pack(anchor="w", padx=(14, 14), pady=(0, 12))
 
         # --- Close button ---
-        ctk.CTkButton(outer, text="Got It", width=100,
+        ctk.CTkButton(outer, text="Got It", width=120, height=34,
+                       fg_color=_ACCENT, hover_color="#4752C4",
                        command=dialog.destroy).pack(pady=(8, 12))
 
         self._setup_dialog(dialog)
