@@ -105,6 +105,26 @@ class MainWindow:
         # Right-click on tab headers to delete categories
         self._bind_tab_context_menu()
 
+        # --- Bottom bar (voice chat setup buttons) ---
+        self.bottom_frame = ctk.CTkFrame(self.root, fg_color="transparent")
+        self.bottom_frame.pack(fill="x", padx=10, pady=(0, 2))
+
+        discord_icon = ctk.CTkImage(
+            Image.open(str(IMAGES_DIR / "discord_icon.png")), size=(20, 20)
+        )
+        self.discord_button = ctk.CTkButton(
+            self.bottom_frame,
+            text="Discord Setup",
+            image=discord_icon,
+            compound="left",
+            width=150,
+            height=32,
+            fg_color="#5865F2",
+            hover_color="#4752C4",
+            command=self.callbacks.get("on_discord_guide"),
+        )
+        self.discord_button.pack(anchor="center")
+
         # --- Status bar ---
         self.status_bar = StatusBar(self.root)
         self.status_bar.pack(fill="x", padx=10, pady=(0, 5))
@@ -167,8 +187,6 @@ class MainWindow:
         )
         menu.add_command(label="Settings",
                          command=self.callbacks.get("on_open_settings"))
-        menu.add_command(label="Discord Setup",
-                         command=self.callbacks.get("on_discord_guide"))
         menu.add_command(label="Refresh Audio Devices",
                          command=self.callbacks.get("on_refresh_audio"))
         menu.add_command(label="Check for Updates",
