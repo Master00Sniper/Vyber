@@ -403,6 +403,68 @@ nav .nav-links a:hover {
     font-size: 0.95rem;
 }
 
+/* ===== FAQ ===== */
+.faq {
+    padding: 6rem 4rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.faq h2 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.faq-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.faq-item summary {
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.faq-item summary::after {
+    content: '+';
+    font-size: 1.25rem;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-left: 1rem;
+}
+
+.faq-item[open] summary::after {
+    content: '−';
+}
+
+.faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq-item p {
+    padding: 0 1.5rem 1.25rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
 /* ===== Download ===== */
 .download {
     padding: 6rem 4rem;

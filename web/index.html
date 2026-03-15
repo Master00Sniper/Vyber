@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vyber - Free Soundboard with Virtual Mic Routing for Discord</title>
-    <meta name="description" content="Free Windows soundboard that plays sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming. Open source.">
+    <title>Free Discord Soundboard — Vyber | Virtual Mic Soundboard for Windows</title>
+    <meta name="description" content="Free Discord soundboard for Windows — play sounds through your speakers and microphone at the same time. Global hotkeys, per-sound volume, VB-CABLE routing. Open source alternative to Voicemeeter.">
+    <meta name="keywords" content="free soundboard Discord, Discord soundboard app, virtual microphone soundboard, soundboard for streaming, hotkey soundboard Windows, VB-CABLE soundboard, voicemeeter alternative free, soundboard for gaming, free soundboard Windows, Discord voice chat soundboard">
     <link rel="canonical" href="https://vyber.mortonapps.com/">
     <link rel="icon" type="image/png" href="images/tray_icon.png">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Vyber - Free Soundboard with Virtual Mic Routing">
-    <meta property="og:description" content="Play sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming.">
+    <meta property="og:title" content="Free Discord Soundboard — Vyber | Virtual Mic Soundboard for Windows">
+    <meta property="og:description" content="Free Discord soundboard — play sounds through speakers and mic simultaneously. Global hotkeys, VB-CABLE routing, open source.">
     <meta property="og:url" content="https://vyber.mortonapps.com/">
     <meta property="og:image" content="https://vyber.mortonapps.com/images/mortonapps_opengraph.jpg">
     <meta property="og:site_name" content="Vyber">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Vyber - Free Soundboard with Virtual Mic Routing">
-    <meta name="twitter:description" content="Play sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming.">
+    <meta name="twitter:title" content="Free Discord Soundboard — Vyber | Virtual Mic Soundboard for Windows">
+    <meta name="twitter:description" content="Free Discord soundboard — play sounds through speakers and mic simultaneously. Global hotkeys, VB-CABLE routing, open source.">
     <meta name="twitter:image" content="https://vyber.mortonapps.com/images/mortonapps_opengraph.jpg">
 
     <link rel="stylesheet" href="style.css">
@@ -35,8 +36,17 @@
         "description": "Free Windows soundboard that plays sounds through your speakers and microphone at the same time. Built for Discord, gaming, and streaming.",
         "url": "https://vyber.mortonapps.com/",
         "downloadUrl": "https://vyber-proxy.mortonapps.com/download/latest",
-        "softwareVersion": "0.1.4",
+        "softwareVersion": "1.0.0",
         "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "featureList": [
+            "Dual audio output — speakers and virtual microphone simultaneously",
+            "One-click VB-CABLE setup and audio routing",
+            "Mic passthrough — voice and sounds mixed together",
+            "Global hotkeys that work in any app or game",
+            "Organized sound library with drag-and-drop categories",
+            "Per-sound volume control from 0% to 200%"
+        ],
+        "screenshot": "https://vyber.mortonapps.com/images/vyber_screenshot.png",
         "offers": {
             "@type": "Offer",
             "price": "0",
@@ -47,6 +57,39 @@
             "name": "Morton Apps",
             "url": "https://mortonapps.com"
         }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "How do I set up Vyber with Discord?",
+                "acceptedAnswer": { "@type": "Answer", "text": "After installing VB-CABLE, set your Discord input device to 'CABLE Output (VB-Audio Virtual Cable)'. Vyber routes your sounds through VB-CABLE automatically. There's a built-in Discord Setup guide in the app." }
+            },
+            {
+                "@type": "Question",
+                "name": "What is VB-CABLE and why do I need it?",
+                "acceptedAnswer": { "@type": "Answer", "text": "VB-CABLE is a free virtual audio driver that creates a virtual microphone on your PC. Vyber uses it to send soundboard audio into voice chat apps like Discord. Vyber installs it for you automatically on first launch." }
+            },
+            {
+                "@type": "Question",
+                "name": "Does Vyber work with OBS, Teamspeak, or other apps?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes. Vyber works with any app that accepts a microphone input — Discord, OBS, Teamspeak, Zoom, Google Meet, and more. Just set the input device to VB-CABLE." }
+            },
+            {
+                "@type": "Question",
+                "name": "Is Vyber really free?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes, Vyber is completely free and open source under the GPL v3 license. No ads, no premium tier, no subscriptions." }
+            },
+            {
+                "@type": "Question",
+                "name": "How is Vyber different from Voicemeeter?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Voicemeeter is a powerful but complex virtual audio mixer. Vyber is purpose-built as a soundboard — add sounds, press a button or hotkey, and it plays through your mic. One-click setup vs. hours of configuration." }
+            }
+        ]
     }
     </script>
 </head>
@@ -76,7 +119,7 @@
         <!-- ===== Hero ===== -->
         <section class="hero">
             <div class="hero-content">
-                <img src="images/vapor_splash_transparent.png" alt="Vyber soundboard logo" class="hero-logo">
+                <img src="images/vyber_splash_transparent.png" alt="Vyber - Free Discord Soundboard for Windows" class="hero-logo">
                 <h1>Be The DJ Nobody Asked For</h1>
                 <p class="tagline">An easy-to-use soundboard built for Discord and voice chat. Sounds play through your speakers and into your friends' ears at the same time — no complicated audio setup needed.</p>
                 <div class="btn-group">
@@ -156,6 +199,33 @@
                     <h3>Add Sounds &amp; Play</h3>
                     <p>Add your audio files, set the output to "Both", and follow the Discord Setup guide inside the app.</p>
                 </div>
+            </div>
+        </section>
+
+        <!-- ===== FAQ ===== -->
+        <section id="faq" class="faq">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-list">
+                <details class="faq-item">
+                    <summary>How do I set up Vyber with Discord?</summary>
+                    <p>After installing VB-CABLE, set your Discord input device to "CABLE Output (VB-Audio Virtual Cable)". Vyber routes your sounds through VB-CABLE automatically. There's a built-in Discord Setup guide in the app that walks you through it step by step.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>What is VB-CABLE and why do I need it?</summary>
+                    <p>VB-CABLE is a free virtual audio driver that creates a virtual microphone on your PC. Vyber uses it to send soundboard audio into voice chat apps like Discord. Vyber installs it for you automatically on first launch.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Does Vyber work with OBS, Teamspeak, or other apps?</summary>
+                    <p>Yes. Vyber works with any app that accepts a microphone input — Discord, OBS, Teamspeak, Zoom, Google Meet, and more. Just set the input device to VB-CABLE in the app you want to use.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Is Vyber really free?</summary>
+                    <p>Yes, Vyber is completely free and open source under the GPL v3 license. No ads, no premium tier, no subscriptions. You can view the full source code on GitHub.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>How is Vyber different from Voicemeeter?</summary>
+                    <p>Voicemeeter is a powerful but complex virtual audio mixer. Vyber is purpose-built as a soundboard — add sounds, press a button or hotkey, and it plays through your mic. No audio routing knowledge needed. One-click setup vs. hours of configuration.</p>
+                </details>
             </div>
         </section>
 
