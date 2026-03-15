@@ -1,4 +1,4 @@
-# Vyber v0.1.5
+# Vyber v1.0.0
 
 ## Changes
 
