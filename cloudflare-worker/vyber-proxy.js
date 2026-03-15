@@ -189,9 +189,27 @@ async function handleRequest(request) {
       const starts = await VYBER_TELEMETRY.get(`events:${today}:app_start`) || '0';
       const heartbeats = await VYBER_TELEMETRY.get(`events:${today}:heartbeat`) || '0';
 
+      // Calculate WAU and MAU by collecting unique install_ids across days
+      const wauSet = new Set(dau);
+      const mauSet = new Set(dau);
+      const todayDate = new Date(today + 'T12:00:00-08:00');
+
+      for (let i = 1; i < 30; i++) {
+        const d = new Date(todayDate);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+        const dayUsers = await VYBER_TELEMETRY.get(`dau:${dateStr}`, { type: 'json' }) || [];
+        dayUsers.forEach(id => {
+          mauSet.add(id);
+          if (i < 7) wauSet.add(id);
+        });
+      }
+
       return new Response(JSON.stringify({
         date: today,
         daily_active_users: dau.length,
+        weekly_active_users: wauSet.size,
+        monthly_active_users: mauSet.size,
         app_starts: parseInt(starts),
         heartbeats: parseInt(heartbeats)
       }, null, 2), {
