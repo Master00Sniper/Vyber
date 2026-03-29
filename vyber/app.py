@@ -38,7 +38,7 @@ from vyber.config import Config
 from vyber.audio_engine import AudioEngine
 from vyber.virtual_cable import VirtualCableManager
 from vyber.sound_manager import SoundManager, SUPPORTED_EXTENSIONS
-from vyber.hotkey_manager import HotkeyManager
+from vyber.hotkey_manager import HotkeyManager, format_hotkey_key_name
 from vyber.ui.main_window import MainWindow
 from vyber.ui.settings_dialog import SettingsDialog
 from vyber import vb_cable_installer
@@ -641,7 +641,7 @@ class VyberApp:
                         modifiers.append(mod)
                 except Exception:
                     pass
-            key_name = event.name
+            key_name = (event.name or "").lower()
             # Don't capture bare modifier presses — wait for a real key
             if key_name in ("ctrl", "left ctrl", "right ctrl",
                             "shift", "left shift", "right shift",
@@ -650,7 +650,7 @@ class VyberApp:
                 dialog.after(0, lambda t=combo: key_label.configure(text=t))
                 return
             # Remove duplicate if the key itself is a modifier name
-            parts = modifiers + [key_name]
+            parts = modifiers + [format_hotkey_key_name(event)]
             combo = "+".join(parts)
             captured["hotkey"] = combo
             dialog.after(0, lambda t=combo: key_label.configure(text=t))
