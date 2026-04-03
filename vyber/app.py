@@ -266,7 +266,20 @@ class VyberApp:
         for hotkey, (cat, sound) in self.sound_manager.get_all_hotkey_mappings().items():
             filepath = sound.path
             volume = sound.volume
-            def _hotkey_play(fp=filepath, v=volume):
+            sound_name = sound.name
+            category = cat
+            def _hotkey_play(fp=filepath, v=volume, name=sound_name, category_name=category):
+                playing = self.audio_engine.get_playing_filepaths()
+                if fp in playing:
+                    logger.info("Stopping sound via hotkey: %s", name)
+                    self.audio_engine.stop_sound(fp)
+                    return
+                if playing:
+                    logger.info("Stopping %d playing sound(s) before hotkey playback",
+                                len(playing))
+                    self.audio_engine.stop_all()
+                logger.info("Playing sound via hotkey: %s [%s] vol=%.0f%%",
+                            name, category_name, v * 100)
                 self.audio_engine.play_sound(fp, v)
             mappings[hotkey] = _hotkey_play
 
