@@ -4,15 +4,12 @@ import ctypes
 import logging
 import os
 from pathlib import Path
-import platform
 import sys
 import threading
-import time
 import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
 
 import customtkinter as ctk
-import requests
 
 logger = logging.getLogger(__name__)
 
@@ -38,13 +35,10 @@ from vyber.config import Config
 from vyber.audio_engine import AudioEngine
 from vyber.virtual_cable import VirtualCableManager
 from vyber.sound_manager import SoundManager, SUPPORTED_EXTENSIONS
-from vyber.hotkey_manager import HotkeyManager
+from vyber.hotkey_manager import HotkeyManager, format_hotkey_key_name
 from vyber.ui.main_window import MainWindow
 from vyber.ui.settings_dialog import SettingsDialog
 from vyber import vb_cable_installer
-from vyber.tray_manager import TrayManager
-from vyber.telemetry import send_telemetry, send_heartbeat
-import updater
 
 
 class VyberApp:
@@ -65,6 +59,8 @@ class VyberApp:
         self._configure_audio()
 
         self._install_pending = False
+        self._shutting_down = False
+        self._status_after_id = None
 
         # Build the GUI
         self.root = ctk.CTk()
@@ -110,10 +106,8 @@ class VyberApp:
             "on_open_settings": self._on_open_settings,
             "on_discord_guide": self._on_discord_guide,
             "on_refresh_audio": self._on_refresh_audio,
-            "on_check_update": self._on_check_update,
-            "on_help": self._on_help,
             "on_about": self._on_about,
-            "on_exit": self._full_shutdown,
+            "on_exit": self._begin_shutdown,
             "get_categories": self.sound_manager.get_categories,
         })
 
@@ -140,32 +134,12 @@ class VyberApp:
         if not self.cable_info.installed:
             self.root.after(500, self._prompt_vb_cable_install)
 
-        # System tray icon
-        tray_icon_path = IMAGES_DIR / "tray_icon.png"
-        self.tray = TrayManager(
-            icon_path=str(tray_icon_path),
-            on_show=lambda: self.root.after(0, self._show_from_tray),
-            on_quit=lambda: self.root.after(0, self._quit_from_tray),
-        )
-        if self.tray.available:
-            self.tray.start()
-
         # Register hotkeys
         self._register_hotkeys()
         self.hotkey_manager.start()
 
         # Start periodic status update
         self._update_status()
-
-        # Heartbeat — send periodic telemetry (no auto-update)
-        self._heartbeat_stop = threading.Event()
-        self._heartbeat_thread = threading.Thread(
-            target=self._heartbeat_loop, daemon=True,
-        )
-        self._heartbeat_thread.start()
-
-        # Telemetry — record app launch
-        send_telemetry("app_start")
 
     def run(self):
         """Start the application main loop."""
@@ -177,140 +151,49 @@ class VyberApp:
         self.root.mainloop()
 
     def _on_close(self):
-        """Minimize to tray on window close, or quit if tray unavailable."""
-        if self.tray.available:
-            self.root.withdraw()
-        else:
-            self._full_shutdown()
+        """Close the application when the window is closed."""
+        if self._shutting_down:
+            return
+        self._begin_shutdown()
 
-    def _show_from_tray(self):
-        """Restore the window from the system tray."""
-        self.root.deiconify()
-        self.root.lift()
-        self.root.focus_force()
+    def _begin_shutdown(self):
+        """Start shutdown without blocking the Tk event loop."""
+        if self._shutting_down:
+            return
+        self._shutting_down = True
 
-    def _quit_from_tray(self):
-        """Quit from the tray menu."""
-        self._full_shutdown()
-
-    def _heartbeat_loop(self):
-        """Send periodic heartbeat telemetry."""
-        while not self._heartbeat_stop.is_set():
-            if self._heartbeat_stop.wait(3600):
-                break
+        if self._status_after_id is not None:
             try:
-                send_heartbeat()
-            except Exception as e:
-                logger.error("Heartbeat error: %s", e)
+                self.root.after_cancel(self._status_after_id)
+            except Exception:
+                pass
+            self._status_after_id = None
 
-    def _on_check_update(self):
-        """Manual update check triggered from tray menu."""
-        threading.Thread(target=self._check_update_thread, daemon=True).start()
+        try:
+            self.root.withdraw()
+        except Exception:
+            pass
 
-    def _check_update_thread(self):
-        """Run the update check in a background thread, then prompt on UI thread."""
-        result = updater.check_for_updates()
-        status = result.get("status")
-        if status == "update":
-            self.root.after(
-                0, lambda: self._show_update_prompt(result["version"])
-            )
-        elif status == "up_to_date":
-            self.root.after(0, self._show_up_to_date)
-        else:
-            msg = result.get("message", "Unknown error")
-            self.root.after(0, lambda: self._show_update_error(msg))
+        threading.Thread(target=self._shutdown_worker, daemon=True).start()
 
-    def _show_up_to_date(self):
-        """Show a small dialog telling the user they're up to date."""
-        from vyber import __version__
+    def _shutdown_worker(self):
+        """Run potentially blocking shutdown steps off the UI thread."""
+        try:
+            self.hotkey_manager.stop()
+            self.audio_engine.stop()
+            self.config.save()
+        finally:
+            try:
+                self.root.after(0, self._destroy_root_safe)
+            except Exception:
+                pass
 
-        dialog = tk.Toplevel(self.root)
-        dialog.withdraw()
-        dialog.configure(bg=_DARK_BG)
-        dialog.title("Check for Updates")
-        dialog.geometry("320x120")
-        dialog.resizable(False, False)
-        dialog.transient(self.root)
-        dialog.grab_set()
-
-        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
-        outer.pack(fill="both", expand=True)
-        ctk.CTkLabel(
-            outer, text=f"Vyber is up to date (v{__version__}).",
-            font=ctk.CTkFont(size=14, weight="bold"),
-        ).pack(pady=(20, 10))
-        ctk.CTkButton(outer, text="OK", width=80, command=dialog.destroy).pack()
-        self._setup_dialog(dialog)
-
-    def _show_update_error(self, message: str):
-        """Show a dialog when the update check fails."""
-        dialog = tk.Toplevel(self.root)
-        dialog.withdraw()
-        dialog.configure(bg=_DARK_BG)
-        dialog.title("Update Check Failed")
-        dialog.geometry("380x130")
-        dialog.resizable(False, False)
-        dialog.transient(self.root)
-        dialog.grab_set()
-
-        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
-        outer.pack(fill="both", expand=True)
-        ctk.CTkLabel(
-            outer, text="Could not check for updates.",
-            font=ctk.CTkFont(size=14, weight="bold"),
-        ).pack(pady=(15, 4))
-        ctk.CTkLabel(
-            outer, text=message,
-            font=ctk.CTkFont(size=12), text_color="gray60",
-        ).pack(pady=(0, 10))
-        ctk.CTkButton(outer, text="OK", width=80, command=dialog.destroy).pack()
-        self._setup_dialog(dialog)
-
-    def _show_update_prompt(self, latest_version):
-        """Show a dialog telling the user a new version is available."""
-        import webbrowser
-        from vyber import __version__
-
-        dialog = tk.Toplevel(self.root)
-        dialog.withdraw()
-        dialog.configure(bg=_DARK_BG)
-        dialog.title("Update Available")
-        dialog.geometry("400x160")
-        dialog.resizable(False, False)
-        dialog.transient(self.root)
-        dialog.grab_set()
-
-        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
-        outer.pack(fill="both", expand=True)
-        ctk.CTkLabel(
-            outer,
-            text=f"Vyber {latest_version} is available!\n"
-                 f"You are running v{__version__}.",
-            font=ctk.CTkFont(size=13, weight="bold"),
-        ).pack(pady=(18, 12))
-
-        btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
-        btn_frame.pack()
-
-        def on_download():
-            webbrowser.open("https://vyber.mortonapps.com/")
-            dialog.destroy()
-
-        ctk.CTkButton(btn_frame, text="Download Update", width=140,
-                       command=on_download).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Later", width=80, fg_color="#444444",
-                       hover_color="#555555", command=dialog.destroy).pack(side="left", padx=5)
-        self._setup_dialog(dialog)
-
-    def _full_shutdown(self):
-        """Clean shutdown — stop everything and exit."""
-        self._heartbeat_stop.set()
-        self.tray.stop()
-        self.hotkey_manager.stop()
-        self.audio_engine.stop()
-        self.config.save()
-        self.root.destroy()
+    def _destroy_root_safe(self):
+        """Destroy the root window once background shutdown is finished."""
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
 
     def _setup_dialog(self, dialog):
         """Finish a dialog: set icon, center, render, then show without flash.
@@ -383,7 +266,20 @@ class VyberApp:
         for hotkey, (cat, sound) in self.sound_manager.get_all_hotkey_mappings().items():
             filepath = sound.path
             volume = sound.volume
-            def _hotkey_play(fp=filepath, v=volume):
+            sound_name = sound.name
+            category = cat
+            def _hotkey_play(fp=filepath, v=volume, name=sound_name, category_name=category):
+                playing = self.audio_engine.get_playing_filepaths()
+                if fp in playing:
+                    logger.info("Stopping sound via hotkey: %s", name)
+                    self.audio_engine.stop_sound(fp)
+                    return
+                if playing:
+                    logger.info("Stopping %d playing sound(s) before hotkey playback",
+                                len(playing))
+                    self.audio_engine.stop_all()
+                logger.info("Playing sound via hotkey: %s [%s] vol=%.0f%%",
+                            name, category_name, v * 100)
                 self.audio_engine.play_sound(fp, v)
             mappings[hotkey] = _hotkey_play
 
@@ -408,11 +304,13 @@ class VyberApp:
 
     def _update_status(self):
         """Periodically update playing count and button states."""
+        if self._shutting_down:
+            return
         count = self.audio_engine.get_playing_count()
         self.main_window.set_playing_count(count)
         playing_remaining = self.audio_engine.get_playing_remaining()
         self.main_window.update_playing_states(playing_remaining)
-        self.root.after(200, self._update_status)
+        self._status_after_id = self.root.after(200, self._update_status)
 
     # --- Callbacks ---
 
@@ -641,7 +539,7 @@ class VyberApp:
                         modifiers.append(mod)
                 except Exception:
                     pass
-            key_name = event.name
+            key_name = (event.name or "").lower()
             # Don't capture bare modifier presses — wait for a real key
             if key_name in ("ctrl", "left ctrl", "right ctrl",
                             "shift", "left shift", "right shift",
@@ -650,7 +548,7 @@ class VyberApp:
                 dialog.after(0, lambda t=combo: key_label.configure(text=t))
                 return
             # Remove duplicate if the key itself is a modifier name
-            parts = modifiers + [key_name]
+            parts = modifiers + [format_hotkey_key_name(event)]
             combo = "+".join(parts)
             captured["hotkey"] = combo
             dialog.after(0, lambda t=combo: key_label.configure(text=t))
@@ -752,6 +650,7 @@ class VyberApp:
         """Master volume changed."""
         self.audio_engine.set_master_volume(value)
         self.config.set("audio", "master_volume", value)
+        self.config.save()
 
     def _on_output_mode_change(self, mode: str):
         """Output mode changed."""
@@ -1029,268 +928,6 @@ class VyberApp:
 
         self._setup_dialog(dialog)
 
-    def _on_help(self):
-        """Show the Help / Report a Bug dialog."""
-        from vyber import __version__
-        from vyber.telemetry import AUTH_KEY
-
-        dialog = tk.Toplevel(self.root)
-        dialog.withdraw()
-        dialog.configure(bg=_DARK_BG)
-        dialog.title("Help — Report a Bug")
-        dialog.geometry("580x620")
-        dialog.resizable(False, False)
-        dialog.transient(self.root)
-        dialog.grab_set()
-
-        outer = ctk.CTkFrame(dialog, fg_color=_DARK_BG)
-        outer.pack(fill="both", expand=True)
-
-        scroll = ctk.CTkScrollableFrame(outer, fg_color="transparent")
-        scroll.pack(fill="both", expand=True, padx=15, pady=(10, 0))
-
-        heading = ctk.CTkFont(size=16, weight="bold")
-        bold = ctk.CTkFont(size=14, weight="bold")
-        body = ctk.CTkFont(size=13)
-
-        # --- Title ---
-        ctk.CTkLabel(scroll, text="Help & Bug Reports",
-                     font=heading).pack(anchor="center", pady=(5, 2))
-        ctk.CTkLabel(
-            scroll, font=body, text_color="gray60",
-            text="Get help with Vyber or submit a bug report to GitHub Issues.",
-        ).pack(anchor="center", pady=(0, 10))
-
-        # --- How Vyber Works ---
-        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
-            fill="x", padx=30, pady=8)
-        ctk.CTkLabel(scroll, text="How Vyber Works",
-                     font=bold).pack(anchor="center", pady=(8, 4))
-        ctk.CTkLabel(
-            scroll, font=body, wraplength=440, justify="left",
-            text="Vyber is a soundboard that plays audio through your speakers "
-                 "and into voice chat at the same time. It uses VB-CABLE to "
-                 "route audio into a virtual microphone that Discord (or any "
-                 "voice app) picks up as your input device.\n\n"
-                 "  \u2022  Add sounds, organize them into categories\n"
-                 "  \u2022  Set global hotkeys to trigger sounds from any app\n"
-                 "  \u2022  Mic Passthrough mixes your real voice in so friends "
-                 "hear both you and your sounds",
-        ).pack(anchor="w", padx=20, pady=(0, 4))
-
-        # --- Troubleshooting ---
-        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
-            fill="x", padx=30, pady=8)
-        ctk.CTkLabel(scroll, text="Troubleshooting",
-                     font=bold).pack(anchor="center", pady=(8, 4))
-        ctk.CTkLabel(
-            scroll, font=body, wraplength=440, justify="left",
-            text="If Vyber isn't working as expected:\n\n"
-                 "  \u2022  Make sure VB-CABLE is installed (restart PC after install)\n"
-                 "  \u2022  Set Discord's Input Device to \"CABLE Output\"\n"
-                 "  \u2022  Disable Discord's voice processing (see Discord Setup)\n"
-                 "  \u2022  Click \"Refresh Audio Devices\" in the menu if you changed\n"
-                 "     audio devices after launching Vyber\n"
-                 "  \u2022  Make sure the output mode is set to \"Both\" (the default)",
-        ).pack(anchor="w", padx=20, pady=(0, 4))
-
-        # --- Bug Report ---
-        ctk.CTkFrame(scroll, height=2, fg_color="gray50").pack(
-            fill="x", padx=30, pady=8)
-        ctk.CTkLabel(scroll, text="Report a Bug",
-                     font=bold).pack(anchor="center", pady=(8, 2))
-        ctk.CTkLabel(
-            scroll, font=body, text_color="gray60",
-            text="Your report will be submitted to GitHub Issues.",
-        ).pack(anchor="center", pady=(0, 8))
-
-        ctk.CTkLabel(scroll, text="Title (brief summary)",
-                     font=body).pack(anchor="center", pady=(2, 2))
-        title_entry = ctk.CTkEntry(scroll, width=400, height=32,
-                                   placeholder_text="e.g., Sound doesn't play through Discord")
-        title_entry.pack(anchor="center", pady=(0, 8))
-
-        ctk.CTkLabel(scroll, text="Description (steps to reproduce)",
-                     font=body).pack(anchor="center", pady=(2, 2))
-        desc_textbox = ctk.CTkTextbox(scroll, width=400, height=100, wrap="word")
-        desc_textbox.pack(anchor="center", pady=(0, 8))
-
-        checkbox_frame = ctk.CTkFrame(scroll, fg_color="transparent")
-        checkbox_frame.pack(anchor="center", pady=(2, 2))
-
-        include_system_var = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(
-            checkbox_frame,
-            text="Include system info (OS, Vyber version)",
-            variable=include_system_var, font=body,
-        ).pack(anchor="w", pady=(2, 4))
-
-        include_logs_var = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(
-            checkbox_frame,
-            text="Include recent logs (last 250 lines)",
-            variable=include_logs_var, font=body,
-        ).pack(anchor="w", pady=(0, 4))
-
-        ctk.CTkLabel(
-            scroll, font=ctk.CTkFont(size=11), text_color="gray50",
-            text="Your Windows username is redacted from logs. Other\n"
-                 "folder names in paths may be visible in the report.",
-        ).pack(anchor="center", pady=(0, 6))
-
-        status_label = ctk.CTkLabel(scroll, text="", font=body)
-        status_label.pack(anchor="center", pady=(0, 4))
-
-        submit_time = [0.0]
-
-        def _get_system_info():
-            import re as _re
-            lines = [
-                f"- **Vyber Version**: {__version__}",
-                f"- **OS**: {platform.system()} {platform.release()} "
-                f"({platform.version()})",
-                f"- **Python**: {platform.python_version()}",
-                f"- **Architecture**: {platform.machine()}",
-            ]
-            return "\n".join(lines)
-
-        def _get_recent_logs(num_lines=250):
-            """Read the last N lines from the log file, redacting usernames."""
-            import re as _re
-            from vyber.config import LOG_FILE
-            if not LOG_FILE.exists():
-                return None
-            try:
-                with open(LOG_FILE, "r", encoding="utf-8",
-                          errors="replace") as f:
-                    all_lines = f.readlines()
-                recent = all_lines[-num_lines:] if len(all_lines) > num_lines else all_lines
-                text = "".join(recent).strip()
-                # Redact Windows usernames from paths
-                text = _re.sub(
-                    r'(C:[/\\][Uu]sers[/\\])([^/\\]+)([/\\])',
-                    r'\1[REDACTED]\3', text)
-                return text
-            except Exception:
-                return None
-
-        def _submit():
-            submit_btn.configure(state="disabled", fg_color="gray50")
-            submit_time[0] = time.time()
-
-            def _re_enable():
-                elapsed = time.time() - submit_time[0]
-                remaining = max(0, 5.0 - elapsed)
-
-                def _do_enable():
-                    try:
-                        submit_btn.configure(state="normal",
-                                             fg_color="#2563eb")
-                    except Exception:
-                        pass  # dialog already closed
-
-                self.root.after(int(remaining * 1000), _do_enable)
-
-            title = title_entry.get().strip()
-            desc = desc_textbox.get("1.0", "end-1c").strip()
-            if not title:
-                status_label.configure(
-                    text="Please enter a title.", text_color="#ff6b6b")
-                _re_enable()
-                return
-            if not desc:
-                status_label.configure(
-                    text="Please describe the bug.", text_color="#ff6b6b")
-                _re_enable()
-                return
-
-            body_parts = ["## Description", desc]
-            if include_system_var.get():
-                body_parts.append("\n## System Information")
-                body_parts.append(_get_system_info())
-            if include_logs_var.get():
-                recent_logs = _get_recent_logs(250)
-                if recent_logs:
-                    body_parts.append("\n## Recent Logs")
-                    body_parts.append("<details>")
-                    body_parts.append(
-                        "<summary>Click to expand logs "
-                        "(last 250 lines)</summary>")
-                    body_parts.append("")
-                    body_parts.append("```")
-                    body_parts.append(recent_logs)
-                    body_parts.append("```")
-                    body_parts.append("</details>")
-            body_parts.append("\n---")
-            body_parts.append("*Submitted via Vyber*")
-            issue_body = "\n".join(body_parts)
-
-            status_label.configure(text="Submitting...",
-                                   text_color="gray60")
-            self.root.update()
-
-            def _safe_configure(widget, **kwargs):
-                try:
-                    widget.configure(**kwargs)
-                except Exception:
-                    pass  # dialog already closed
-
-            def _do_submit():
-                try:
-                    resp = requests.post(
-                        "https://vyber-proxy.mortonapps.com/repos/Master00Sniper/Vyber/issues",
-                        headers={
-                            "Accept": "application/vnd.github.v3+json",
-                            "User-Agent": f"Vyber/{__version__}",
-                            "X-Vyber-Auth": AUTH_KEY,
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "title": f"[Bug Report] {title}",
-                            "body": issue_body,
-                        },
-                        timeout=15,
-                    )
-                    if resp.status_code == 201:
-                        num = resp.json().get("number", "?")
-                        self.root.after(0, lambda: _safe_configure(
-                            status_label,
-                            text=f"Submitted! (Issue #{num})",
-                            text_color="#4ade80"))
-                        self.root.after(0, lambda: (
-                            title_entry.delete(0, "end"),
-                            desc_textbox.delete("1.0", "end"),
-                        ))
-                    else:
-                        detail = resp.text[:200]
-                        logger.error("Bug report failed: HTTP %d — %s",
-                                     resp.status_code, detail)
-                        self.root.after(0, lambda: _safe_configure(
-                            status_label,
-                            text=f"Failed (HTTP {resp.status_code}): {detail}",
-                            text_color="#ff6b6b"))
-                except requests.exceptions.Timeout:
-                    self.root.after(0, lambda: _safe_configure(
-                        status_label,
-                        text="Request timed out.", text_color="#ff6b6b"))
-                except Exception:
-                    self.root.after(0, lambda: _safe_configure(
-                        status_label,
-                        text="Network error.", text_color="#ff6b6b"))
-                self.root.after(0, _re_enable)
-
-            threading.Thread(target=_do_submit, daemon=True).start()
-
-        submit_btn = ctk.CTkButton(
-            scroll, text="Submit Bug Report", width=180,
-            fg_color="#2563eb", hover_color="#1d4ed8", command=_submit)
-        submit_btn.pack(anchor="center", pady=(4, 20))
-
-        # --- Close ---
-        ctk.CTkButton(outer, text="Close", width=100,
-                       command=dialog.destroy).pack(pady=(8, 12))
-
-        self._setup_dialog(dialog)
 
     def _on_about(self):
         """Show the About Vyber dialog."""
