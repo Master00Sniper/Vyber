@@ -1,4 +1,4 @@
 User-agent: *
-Disallow: /stats.html
+Allow: /
 
 Sitemap: https://vyber.mortonapps.com/sitemap.xml
