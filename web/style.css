@@ -48,6 +48,10 @@ a:hover {
     color: #ff4040;
 }
 
+h1, h2 {
+    text-wrap: balance;
+}
+
 /* ===== Navigation ===== */
 nav {
     display: flex;

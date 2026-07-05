@@ -266,11 +266,34 @@
 
         /* Footer */
         footer {
-            padding: 2rem;
+            padding: 2rem 4rem;
             text-align: center;
             border-top: 1px solid var(--border);
             color: var(--text-secondary);
             font-size: 0.85rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-hover);
+        }
+
+        h1, h2 {
+            text-wrap: balance;
         }
 
         /* Responsive */
@@ -301,7 +324,7 @@
         </a>
         <ul class="nav-links">
             <li><a href="/">Home</a></li>
-            <li><a href="https://github.com/Master00Sniper/Vyber">GitHub</a></li>
+            <li><a href="https://github.com/Master00Sniper/Vyber" target="_blank" rel="noopener">GitHub</a></li>
         </ul>
     </nav>
 
@@ -321,7 +344,13 @@
     </main>
 
     <footer>
-        <p>Vyber Stats Dashboard &mdash; Not linked from main site</p>
+        <div class="footer-links">
+            <a href="https://github.com/Master00Sniper/Vyber" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/Master00Sniper/Vyber/issues" target="_blank" rel="noopener">Report a Bug</a>
+            <a href="policies">Privacy</a>
+            <a href="https://ko-fi.com/master00sniper" target="_blank" rel="noopener">Ko-fi</a>
+        </div>
+        <p>&copy; 2026 Morton Apps. All rights reserved.</p>
     </footer>
 
     <script>
