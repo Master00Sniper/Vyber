@@ -9,6 +9,14 @@ const ALLOWED_REPO_PREFIX = '/repos/Master00Sniper/Vyber/';
 // Rate limit: max requests per IP for the public download endpoint
 const DOWNLOAD_RATE_LIMIT = 30;   // requests per window
 const DOWNLOAD_RATE_WINDOW = 3600; // 1 hour in seconds
+// ⛔ THE TELEMETRY KEY IS NOT A SECRET AND CANNOT BE ONE. It ships hardcoded
+// inside the distributed desktop app, so anyone who downloads Vyber can read it
+// out of the client. Rotating it would only break reporting for every existing
+// install. Secrecy is therefore not the available defence — a per-IP cap is.
+// This is what actually stops someone inflating DAU/WAU/MAU with fabricated
+// install_ids. (2026-09-01.)
+const TELEMETRY_RATE_LIMIT = 120;   // events per IP per window; a real client sends a handful
+const TELEMETRY_RATE_WINDOW = 3600; // 1 hour in seconds
 
 // Cache TTL for /download/latest (avoids burning GitHub API calls)
 const DOWNLOAD_CACHE_TTL = 600; // 10 minutes
@@ -116,10 +124,22 @@ async function handleRequest(request) {
   }
 
   // =========================================
-  // Auth required for all endpoints below
+  // Auth — SPLIT BY ROUTE (2026-09-01)
   // =========================================
-  const authHeader = request.headers.get('X-Vyber-Auth');
-  if (!authHeader || authHeader !== VYBER_AUTH_KEY) {
+  // One blanket gate used to guard both /telemetry (a WRITE) and /stats (a
+  // read), so the stats dashboard on the public website had to carry a
+  // write-capable key. Anyone reading that page could fabricate usage numbers.
+  // /stats now also accepts a read-only key, so the website carries only that.
+  // The write key still works everywhere, which is what keeps every installed
+  // app reporting without an update.
+  const authHeader = request.headers.get('X-Vyber-Auth') || '';
+  const statsHeader = request.headers.get('X-Stats-Key') || '';
+  const isWriteKey = authHeader && authHeader === VYBER_AUTH_KEY;
+  const isStatsKey = (typeof VYBER_STATS_KEY !== 'undefined' && VYBER_STATS_KEY)
+    ? (statsHeader === VYBER_STATS_KEY || authHeader === VYBER_STATS_KEY)
+    : false;
+  const allowed = url.pathname === '/stats' ? (isWriteKey || isStatsKey) : isWriteKey;
+  if (!allowed) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -127,6 +147,16 @@ async function handleRequest(request) {
   // Telemetry endpoint
   // =========================================
   if (url.pathname === '/telemetry' && request.method === 'POST') {
+    // Per-IP cap — see TELEMETRY_RATE_LIMIT. Silently accepted (204) rather
+    // than 429'd: a real client must never retry-storm because it hit a cap,
+    // and a forger gets no signal about where the limit is.
+    const tIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const tKey = `ratelimit:telemetry:${tIP}`;
+    const tHits = parseInt(await VYBER_TELEMETRY.get(tKey) || '0');
+    if (tHits >= TELEMETRY_RATE_LIMIT) {
+      return new Response(null, { status: 204 });
+    }
+    await VYBER_TELEMETRY.put(tKey, (tHits + 1).toString(), { expirationTtl: TELEMETRY_RATE_WINDOW });
     try {
       const data = await request.json();
       const { event, version, os, install_id } = data;

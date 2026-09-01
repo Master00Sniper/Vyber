@@ -355,13 +355,17 @@
 
     <script>
         const API_URL = 'https://vyber-proxy.mortonapps.com/stats';
-        const AUTH_TOKEN = 'ufxknajtcpqylxuvtumanhypesbtexsq';
+        // READ-ONLY key (2026-09-01). This page is public, so whatever key it
+        // carries is public too. It used to carry the app's WRITE key, which
+        // also authorised POST /telemetry - anyone viewing source could have
+        // fabricated usage numbers. This key only reads /stats.
+        const AUTH_TOKEN = '69cd056634f8c18269306a6735634ce0';
 
         async function fetchStats() {
             try {
                 const response = await fetch(API_URL, {
                     headers: {
-                        'X-Vyber-Auth': AUTH_TOKEN
+                        'X-Stats-Key': AUTH_TOKEN
                     }
                 });
 
