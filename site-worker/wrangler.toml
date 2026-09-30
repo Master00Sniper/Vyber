@@ -1,0 +1,36 @@
+# =============================================================================
+# vyber-website: vyber.mortonapps.com as a Worker with static assets.
+#
+# BUSINESS Cloudflare account (2188c49e…). Replaces the personal account's Pages
+# project `vyber` (zone move, 2026-09-29). Worker name chosen by Greg 2026-09-29;
+# a Worker cannot be renamed in place.
+#
+# Deploy with ../deploy.sh, never by hand (cache-buster stamp, commit, deploy
+# with the business token read BY NAME and a pinned wrangler, push).
+#
+# Kept in site-worker/ rather than the repo root: the old Pages project builds
+# this repo on every push until the cutover and would read a root wrangler.toml.
+# The desktop-app proxy is a different Worker (../cloudflare-worker/).
+# =============================================================================
+name = "vyber-website"
+account_id = "2188c49e0e996a3542239668d9fcc8e7"
+main = "index.js"
+# Same date the Pages project ran on.
+compatibility_date = "2026-02-10"
+
+# No workers.dev URL, no preview URLs: they replace the old pages.dev redirect
+# middleware. Traffic arrives only through the zone route vyber.mortonapps.com/*.
+workers_dev = false
+preview_urls = false
+
+[assets]
+directory = "../web"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"
+# Every request runs index.js first so each response gets the Pages defaults
+# back (308 clean-URL redirects, charsets, 404 no-store, CORS + Referrer-Policy).
+run_worker_first = true
+
+[observability]
+enabled = true

@@ -1,0 +1,41 @@
+# =============================================================================
+# vyber-proxy: the desktop app's backend at vyber-proxy.mortonapps.com
+# (telemetry, /stats, /download/latest, the GitHub issues proxy).
+#
+# BUSINESS Cloudflare account (2188c49e…). Replaces the personal account's
+# Worker `vyber-github-proxy` (zone move, 2026-09-29), same source byte for byte.
+# Worker name chosen by Greg 2026-09-29; a Worker cannot be renamed in place.
+#
+# Deploy (from this directory, business token read BY NAME, pinned wrangler):
+#   T=$(grep -vE '^\s*#' ~/.mortoncc-onboarding/credentials | grep -oP '^CLOUDFLARE_API_TOKEN=["'\'']?\K[^"'\'' ]+' | head -1)
+#   CLOUDFLARE_API_TOKEN="$T" CLOUDFLARE_ACCOUNT_ID=2188c49e0e996a3542239668d9fcc8e7 npx wrangler@4.124.0 deploy
+#
+# ⛔ Every installed copy of the app calls vyber-proxy.mortonapps.com with the write
+# key hardcoded; never rotate VYBER_AUTH_KEY (memory:
+# reference_vapor_vyber_telemetry_keys).
+# =============================================================================
+name = "vyber-proxy"
+account_id = "2188c49e0e996a3542239668d9fcc8e7"
+main = "vyber-proxy.js"
+# Same date as the personal Worker. Service-worker syntax (addEventListener),
+# so every binding below is a GLOBAL, not env.X.
+compatibility_date = "2024-01-01"
+
+# Reached only through the zone route vyber-proxy.mortonapps.com/*.
+workers_dev = false
+preview_urls = false
+
+[observability]
+enabled = true
+
+# Copy of the personal namespace VYBER_TELEMETRY (made 2026-09-29, values,
+# metadata and expirations intact). Binding name is what the code reads.
+[[kv_namespaces]]
+binding = "VYBER_TELEMETRY"
+id = "1dc803e54d25443989152d6193254ed5"
+
+# Secrets (wrangler secret put <NAME>):
+#   GITHUB_PAT        fine-grained PAT, Master00Sniper/Vapor + Vyber, issues RW,
+#                     contents R (~/gm_credentials.txt, "vapor-vyber-proxy Token")
+#   VYBER_AUTH_KEY    write key, public by design (hardcoded in the app)
+#   VYBER_STATS_KEY   read-only key for /stats (in web/stats.html)

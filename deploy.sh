@@ -2,21 +2,37 @@
 # =============================================================================
 # deploy.sh — vyber.mortonapps.com — THE ONLY SUPPORTED WAY TO DEPLOY THIS SITE.
 #
-# Cloudflare Pages builds this site from the GitHub repo (push to `main` =
-# build). A raw `git push` is NOT a valid deploy: it skips the cache-buster
-# stamp below, so a CSS/JS change can be invisible to returning visitors for
-# up to ~4 hours. ALWAYS deploy by running ./deploy.sh.
+# The site is the BUSINESS-account Worker `vyber-website` (static assets from
+# web/; config in site-worker/). It moved off the personal account's Pages
+# project `vyber` with the mortonapps.com zone move (2026-09-29).
 #
 #   1. Stamps a fresh ?v=<UTC-timestamp> onto EVERY local css/js reference
 #      across every .html page under web/ (strips any prior ?v first).
-#   2. Commits + pushes to origin/main → triggers the CF Pages build.
+#   2. Commits, rebases on origin/main.
+#   3. Deploys the Worker with a PINNED wrangler and the BUSINESS token read BY
+#      NAME from ~/.mortoncc-onboarding/credentials. ⛔ Never the ambient
+#      CLOUDFLARE_API_TOKEN: ~/.bashrc exports the PERSONAL token into every
+#      shell (memory: feedback_cf_account_isolation).
+#   4. Pushes to origin/main for source history. Until the zone cutover the
+#      push ALSO rebuilds the old personal Pages project (still live then), so
+#      both copies stay identical; after the cutover its git builds are
+#      switched off and the push is history only.
+# A failed deploy stops before the push.
 #
 # This repo also holds the desktop app source, so the commit may include app
-# changes. Only web/ is published by Pages.
+# changes. Only web/ is published. The app's backend (telemetry, stats,
+# downloads, issues) is a different Worker, `vyber-proxy`, in cloudflare-worker/
+# (deploy command in its wrangler.toml).
+# Override the wrangler pin for one run: WRANGLER=wrangler@x.y.z ./deploy.sh
 # =============================================================================
 set -euo pipefail
 cd "$(dirname "$0")"
 ROOT="web"
+WRANGLER="${WRANGLER:-wrangler@4.124.0}"
+BIZ_ACCOUNT_ID="2188c49e0e996a3542239668d9fcc8e7"
+CRED="$HOME/.mortoncc-onboarding/credentials"
+BIZ_TOKEN="$(grep -vE '^\s*#' "$CRED" | grep -oP '^CLOUDFLARE_API_TOKEN=["'\'']?\K[^"'\'' ]+' | head -1 || true)"
+[ -n "$BIZ_TOKEN" ] || { echo "✗ no CLOUDFLARE_API_TOKEN line in $CRED (the business token)"; exit 1; }
 V="$(date -u +%Y%m%d%H%M%S)"
 
 STAMP_ROOT="$ROOT" STAMP_V="$V" node <<'NODE'
@@ -34,8 +50,14 @@ console.log('stamped ' + n + ' html file(s) with ?v=' + V);
 NODE
 
 git add -A
-if git diff --cached --quiet; then echo "No changes to deploy."; exit 0; fi
-git commit -q -m "deploy: stamp assets ?v=${V}"
+if git diff --cached --quiet; then
+  echo "No source changes; redeploying the current tree."
+else
+  git commit -q -m "deploy: stamp assets ?v=${V}"
+fi
 git pull --rebase --autostash origin main >/dev/null 2>&1 || true
+
+( cd site-worker && CLOUDFLARE_API_TOKEN="$BIZ_TOKEN" CLOUDFLARE_ACCOUNT_ID="$BIZ_ACCOUNT_ID" npx -y "$WRANGLER" deploy )
+
 git push origin main
-echo "✓ vyber.mortonapps.com deploy pushed (assets ?v=${V}) — Cloudflare Pages is building."
+echo "✓ vyber.mortonapps.com deployed to Worker vyber-website (business) and pushed (assets ?v=${V})."
