@@ -644,6 +644,23 @@ nav .nav-links a:hover {
     transform: translateX(5px);
 }
 
+.morton-callout .morton-sibling {
+    margin: 1.25rem 0 0;
+    font-size: 0.9rem;
+    text-wrap: balance;
+}
+
+.morton-sibling a {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.morton-sibling a:hover {
+    color: var(--accent-hover);
+}
+
 /* ===== Footer ===== */
 footer {
     padding: 2rem 4rem;
