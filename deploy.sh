@@ -49,7 +49,9 @@ for (const f of walk(root)) {
 console.log('stamped ' + n + ' html file(s) with ?v=' + V);
 NODE
 
-git add -A
+git add -A -- "$ROOT"   # stage only the deployed site (MCC sibling fix 2026-10-06; never a bare add-all)
+OTHER=$(git status --porcelain | grep -v "^.. $ROOT/" || true)
+[ -n "$OTHER" ] && { echo "Not committed (outside $ROOT/, review by hand):"; echo "$OTHER"; }
 if git diff --cached --quiet; then
   echo "No source changes; redeploying the current tree."
 else
