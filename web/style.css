@@ -181,10 +181,6 @@ nav .nav-links a:hover {
     transform: translateY(30px);
 }
 
-.hero .kofi-button-container {
-    transform: translateY(30px);
-}
-
 /* ===== Buttons ===== */
 .btn {
     display: inline-flex;
@@ -230,20 +226,6 @@ nav .nav-links a:hover {
     gap: 0.75rem;
     justify-content: center;
     flex-wrap: wrap;
-}
-
-/* ===== Ko-fi Button ===== */
-.kofi-button-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 1.5rem;
-}
-
-.kofi-button-container .kofi-button {
-    height: 48px !important;
-    line-height: 48px !important;
-    padding: 0 1.5rem !important;
-    font-size: 0.95rem !important;
 }
 
 /* ===== Features ===== */
